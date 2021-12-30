@@ -13,11 +13,19 @@ export default function App() {
   // const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
-    message.info({
+    message.open({
       content: "haha",
-      duration: 3,
+      // icon: null,
+      key: 0,
+      duration: 0,
       style: {
         marginTop: "20vh"
+      },
+      onClick: () => {
+        message.destroy();
+      },
+      onClose: () => {
+        console.log("been closed...");
       }
     });
   }, []);
@@ -31,7 +39,13 @@ export default function App() {
           zIndex: 10
         }}
         onClick={() => {
-          message.success({ content: "ooo" + counter++ });
+          message.success({
+            content: "ooo" + counter++,
+            duration: 0,
+            onClick: () => {
+              message.destroy(0);
+            }
+          });
         }}
       >
         add message
@@ -45,6 +59,20 @@ export default function App() {
         }}
       >
         add message duration
+      </button>
+      <button
+        style={{
+          zIndex: 100
+        }}
+        onClick={() => {
+          const loading = message.loading({
+            content: "eee" + counter++,
+            duration: 0
+          });
+          setTimeout(loading, 4000);
+        }}
+      >
+        async loading
       </button>
     </div>
   );

@@ -1,6 +1,16 @@
 :root {
+  /* color */
   --color-aux-success: #52c41a;
   --color-aux-link: #1890ff;
   --color-aux-warning: #faad14;
   --color-aux-error: #ff4d4f;
+
+  /* size */
+  --border-radius-normal: 2px;
+  --border-radius-bigger: 4px;
+
+  /* z-index */
+  --z-index-100: 100;
+  --z-index-1000: 1000;
+  --z-index-10000: 10000;
 }

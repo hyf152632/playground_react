@@ -15,11 +15,12 @@ export interface NoticeProps {
   updateMark?: string;
   /** Mark as final key since set maxCount may keep the key but user pass key is different */
   noticeKey: React.Key;
+  key?: string | number;
   closeIcon?: React.ReactNode;
   closable?: boolean;
   props?: DivProps;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
-  onClose?: (key: React.Key) => void;
+  onClose?: (key?: React.Key) => void;
 
   /** @private Only for internal usage. We don't promise that we will refactor this */
   holder?: HTMLDivElement;
@@ -53,7 +54,8 @@ const Notice = ({
   index,
   duration = 0,
   onShouldUnmountNotice,
-  noticeKey
+  noticeKey,
+  onClick
 }: NoticeProps & {
   index: number;
   onShouldUnmountNotice: (noticeKey: React.Key) => void;
@@ -116,6 +118,7 @@ const Notice = ({
       ref={noticeRef}
       className={`${styles.notice_wrapper} ${className}`}
       style={{ ...style, top: `${(index + 1) * 65}px` }}
+      onClick={onClick}
     >
       {children}
     </div>

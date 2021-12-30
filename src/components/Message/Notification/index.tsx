@@ -7,7 +7,7 @@ import {
   useCallback,
   CSSProperties
 } from "react";
-import { render, unmountComponentAtNode } from "react-dom";
+import { render } from "react-dom";
 import Notice, { NoticeProps } from "./Notice";
 // import styles from "./index.module.css";
 
@@ -30,65 +30,79 @@ function getUuid() {
   return `rcNotification_${now}_${id}`;
 }
 
-const Notification = forwardRef(({}: NotificationProps, ref) => {
-  const [notices, setNotices] = useState<NoticeProps[]>([]);
+const Notification = forwardRef(
+  ({ maxCount = 10000 }: NotificationProps, ref) => {
+    const [notices, setNotices] = useState<NoticeProps[]>([]);
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      add: (notice: NoticeProps) => {
-        const noticeKey = notice.noticeKey || getUuid();
+    useImperativeHandle(
+      ref,
+      () => ({
+        add: (notice: NoticeProps) => {
+          const noticeKey = notice.noticeKey || getUuid();
 
-        setNotices((prevNotices) => {
-          const newNotices = [
-            {
-              ...notice,
-              noticeKey,
-              style: { ...(notice.style || {}), top: "65px" },
-              visible: true
-            },
-            ...prevNotices
-          ];
-          return newNotices.map((noticeEach, index) => ({
-            ...noticeEach,
-            index
-          }));
-        });
-      },
-      remove: (key: string) => {
-        setNotices((prevNotices) => {
-          return prevNotices.filter((msg) => msg.noticeKey !== key);
-        });
-      }
-    }),
-    []
-  );
+          setNotices((prevNotices) => {
+            const newNotices = [
+              {
+                ...notice,
+                noticeKey,
+                style: { ...(notice.style || {}), top: "65px" },
+                visible: true
+              },
+              ...prevNotices
+            ].slice(0, maxCount);
+            return newNotices.map((noticeEach, index) => ({
+              ...noticeEach,
+              index
+            }));
+          });
+        },
+        remove: (key?: string | number) => {
+          if (typeof key !== "string" && typeof key !== "number") {
+            setNotices([]);
+            return;
+          }
+          setNotices((prevNotices) => {
+            return prevNotices.filter((msg) => msg.key !== key);
+          });
+        }
+      }),
+      [maxCount]
+    );
 
-  useEffect(() => {
-    console.log(notices, "----------- notices ------------");
-  }, [notices]);
+    useEffect(() => {
+      console.log(notices, "----------- notices ------------");
+    }, [notices]);
 
-  const onUnmountNotice = useCallback((noticeKey) => {
-    setNotices((prevNotices) => {
-      return prevNotices
-        .filter((notice) => notice.noticeKey !== noticeKey)
-        .map((notice, index) => ({ ...notice, index }));
-    });
-  }, []);
+    const onUnmountNotice = useCallback((noticeKey) => {
+      setNotices((prevNotices) => {
+        const currentNotice = prevNotices.find(
+          (notice) => notice.noticeKey === noticeKey
+        );
 
-  return (
-    <>
-      {notices.map((notice, index) => (
-        <Notice
-          onShouldUnmountNotice={onUnmountNotice}
-          key={notice.noticeKey}
-          {...notice}
-          index={index}
-        />
-      ))}
-    </>
-  );
-});
+        if (currentNotice && currentNotice.onClose) {
+          currentNotice.onClose();
+        }
+
+        return prevNotices
+          .filter((notice) => notice.noticeKey !== noticeKey)
+          .map((notice, index) => ({ ...notice, index }));
+      });
+    }, []);
+
+    return (
+      <>
+        {notices.map((notice, index) => (
+          <Notice
+            onShouldUnmountNotice={onUnmountNotice}
+            {...notice}
+            key={notice.noticeKey}
+            index={index}
+          />
+        ))}
+      </>
+    );
+  }
+);
 
 const notificationCreator = () => (callback: any) => {
   let notificationRoot = document.querySelector("#notification_root");
@@ -117,11 +131,12 @@ const notificationCreator = () => (callback: any) => {
             ref.remove(key);
           },
           component: notificationRoot,
-          destroy() {
-            unmountComponentAtNode(notificationRoot!);
-            if (notificationRoot?.parentNode) {
-              notificationRoot.parentNode.removeChild(notificationRoot!);
-            }
+          destroy(key: string | number) {
+            ref.remove(key);
+            // unmountComponentAtNode(notificationRoot!);
+            // if (notificationRoot?.parentNode) {
+            //   notificationRoot.parentNode.removeChild(notificationRoot!);
+            // }
           }
         };
         callback(handles);
