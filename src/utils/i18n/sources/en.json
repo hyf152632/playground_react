@@ -1,0 +1,5 @@
+{
+  "hello, world": "hello, world",
+  "nest": { "greeting": "hi, {{who}}" },
+  "a_cool_story": "in {{where}}, {{who}}, do {{what}}."
+}

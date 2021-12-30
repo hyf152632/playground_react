@@ -1,0 +1,5 @@
+{
+  "hello, world": "你好，世界",
+  "nest": { "greeting": "嗨, {{who}}" },
+  "a_cool_story": "在 {{where}}, {{who}}, 干了 {{what}}."
+}
