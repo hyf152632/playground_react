@@ -3,6 +3,7 @@ import {
   // useRef,
   useImperativeHandle,
   useEffect,
+  useMemo,
   forwardRef,
   useCallback,
   CSSProperties
@@ -30,9 +31,20 @@ function getUuid() {
   return `rcNotification_${now}_${id}`;
 }
 
+const defaultMaxCount = 10000;
+
 const Notification = forwardRef(
-  ({ maxCount = 10000 }: NotificationProps, ref) => {
+  ({ maxCount = defaultMaxCount }: NotificationProps, ref) => {
     const [notices, setNotices] = useState<NoticeProps[]>([]);
+    // get same config from ref imperative handle
+    const [notificationPropsFromRef, setNotificationPropsFromRef] = useState<
+      NotificationProps
+    >({});
+
+    const integratedProps = useMemo(
+      () => ({ maxCount, ...notificationPropsFromRef }),
+      [maxCount, notificationPropsFromRef]
+    );
 
     useImperativeHandle(
       ref,
@@ -49,7 +61,7 @@ const Notification = forwardRef(
                 visible: true
               },
               ...prevNotices
-            ].slice(0, maxCount);
+            ].slice(0, integratedProps.maxCount);
             return newNotices.map((noticeEach, index) => ({
               ...noticeEach,
               index
@@ -64,9 +76,12 @@ const Notification = forwardRef(
           setNotices((prevNotices) => {
             return prevNotices.filter((msg) => msg.key !== key);
           });
+        },
+        config: (options: NotificationProps) => {
+          setNotificationPropsFromRef((prev) => ({ ...prev, ...options }));
         }
       }),
-      [maxCount]
+      [integratedProps]
     );
 
     useEffect(() => {
@@ -89,16 +104,49 @@ const Notification = forwardRef(
       });
     }, []);
 
+    // those props will be override by Notice props's same prop.
+    const {
+      className: classNameFromProps,
+      style: styleFromProps = {},
+      prefixCls: prefixClsFromProps
+    } = integratedProps;
+
     return (
       <>
-        {notices.map((notice, index) => (
-          <Notice
-            onShouldUnmountNotice={onUnmountNotice}
-            {...notice}
-            key={notice.noticeKey}
-            index={index}
-          />
-        ))}
+        {notices.map((notice, index) => {
+          const {
+            prefixCls,
+            style = {},
+            className,
+            duration,
+            children,
+            noticeKey,
+            closeIcon,
+            closable,
+            divProps,
+            onClick,
+            onClose
+          } = notice;
+
+          return (
+            <Notice
+              onShouldUnmountNotice={onUnmountNotice}
+              className={className || classNameFromProps}
+              style={{ ...styleFromProps, ...style }}
+              prefixCls={prefixCls || prefixClsFromProps}
+              duration={duration}
+              children={children}
+              noticeKey={noticeKey}
+              closeIcon={closeIcon}
+              closable={closable}
+              divProps={divProps}
+              onClick={onClick}
+              onClose={onClose}
+              key={notice.noticeKey}
+              index={index}
+            />
+          );
+        })}
       </>
     );
   }
@@ -137,6 +185,9 @@ const notificationCreator = () => (callback: any) => {
             // if (notificationRoot?.parentNode) {
             //   notificationRoot.parentNode.removeChild(notificationRoot!);
             // }
+          },
+          setConfig(options: NotificationProps) {
+            ref.config(options);
           }
         };
         callback(handles);

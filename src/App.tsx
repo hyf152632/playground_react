@@ -17,10 +17,13 @@ export default function App() {
       content: "haha",
       // icon: null,
       key: 0,
-      duration: 0,
-      style: {
-        marginTop: "20vh"
-      },
+      // duration: 0,
+      // className: "rotate",
+      // style: {
+      //   marginTop: "20vh",
+      //   paddingTop: "20px",
+      //   color: "red"
+      // },
       onClick: () => {
         message.destroy();
       },

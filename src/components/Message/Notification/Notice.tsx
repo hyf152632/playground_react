@@ -7,26 +7,22 @@ interface DivProps extends React.HTMLProps<HTMLDivElement> {
 }
 
 export interface NoticeProps {
-  prefixCls: string;
+  prefixCls?: string;
   style?: CSSProperties;
   className?: string;
   duration?: number | null;
   children?: React.ReactNode;
-  updateMark?: string;
   /** Mark as final key since set maxCount may keep the key but user pass key is different */
   noticeKey: React.Key;
   key?: string | number;
   closeIcon?: React.ReactNode;
   closable?: boolean;
-  props?: DivProps;
+  divProps?: DivProps;
   onClick?: React.MouseEventHandler<HTMLDivElement>;
   onClose?: (key?: React.Key) => void;
 
   /** @private Only for internal usage. We don't promise that we will refactor this */
   holder?: HTMLDivElement;
-
-  /** @private Provided by CSSMotionList */
-  visible?: boolean;
 }
 
 export interface NoticeContent
@@ -36,7 +32,6 @@ export interface NoticeContent
   > {
   prefixCls?: string;
   key?: React.Key;
-  updateMark?: string;
   content?: React.ReactNode;
   onClose?: () => void;
 }
