@@ -131,12 +131,42 @@ function message() {
     return WrappedContent();
   }
 
-  const typeFn = (notificationRef: any, type: MessageType) => (
+  const typeFn = (notificationRef: any, type: MessageType | null) => (
     contentOrConfig: ReactNode | Message,
     duration = MESSAGE_GLOBAL_CONFIG.duration,
-    onClose?: () => void,
-    key?: number | string
+    onClose?: () => void
   ) => {
+    // returned remove handle request a uniq key
+    let key: number | string;
+    if (!isMessageConfig(contentOrConfig)) {
+      key = getDefalutKey();
+    } else {
+      const hasConfigHasKey =
+        typeof contentOrConfig.key === "number" ||
+        typeof contentOrConfig.key === "string";
+
+      if (!hasConfigHasKey) {
+        key = getDefalutKey();
+      } else {
+        key = contentOrConfig.key as any;
+      }
+    }
+
+    let isSettled = false;
+
+    const wrappedOnClose = () => {
+      if (!isMessageConfig(contentOrConfig)) {
+        if (onClose) {
+          onClose();
+        }
+      } else {
+        if (contentOrConfig.onClose) {
+          contentOrConfig.onClose();
+        }
+      }
+      isSettled = true;
+    };
+
     if (isMessageConfig(contentOrConfig)) {
       const {
         content,
@@ -144,13 +174,12 @@ function message() {
         duration = MESSAGE_GLOBAL_CONFIG.duration
       } = contentOrConfig;
 
-      console.log(MESSAGE_GLOBAL_CONFIG, "------------");
-
       notificationRef.notice({
         key,
         ...MESSAGE_GLOBAL_CONFIG,
         duration,
         ...contentOrConfig,
+        onClose: wrappedOnClose,
         children: genWrappedChildenByType(type, content, icon)
       });
     } else {
@@ -158,61 +187,50 @@ function message() {
         key,
         ...MESSAGE_GLOBAL_CONFIG,
         duration,
-        onClose,
-        children: genWrappedChildenByType(MessageType.success, contentOrConfig)
+        onClose: wrappedOnClose,
+        children: genWrappedChildenByType(type, contentOrConfig)
       });
     }
+
+    const isDuration0 =
+      duration === 0 ||
+      (isMessageConfig(contentOrConfig) && contentOrConfig.duration === 0);
+    // if the message not auto close, return close handle.
+    if (isDuration0 || (!isDuration0 && MESSAGE_GLOBAL_CONFIG.duration === 0)) {
+      return () => {
+        notificationRef.destroy(key);
+      };
+    }
+
+    let requestAnimationFrameHandler: number;
+
+    return new Promise<boolean>((resolve) => {
+      const queryIsSettled = () => {
+        if (isSettled) {
+          resolve(true);
+          window.cancelAnimationFrame(requestAnimationFrameHandler);
+          return;
+        } else {
+          requestAnimationFrameHandler = window.requestAnimationFrame(
+            queryIsSettled
+          );
+        }
+      };
+
+      requestAnimationFrameHandler = window.requestAnimationFrame(
+        queryIsSettled
+      );
+    });
   };
 
   return {
-    open: ({ content, icon, ...restMsg }: Message) => {
-      console.log(MESSAGE_GLOBAL_CONFIG, "------------");
-      notificationRef.notice({
-        ...MESSAGE_GLOBAL_CONFIG,
-        ...restMsg,
-        children: genWrappedChildenByType(null, content || "", icon)
-      });
-    },
-    // success: ({ content, icon, ...restMsg }: Message) => {
+    open: typeFn(notificationRef, null),
     success: typeFn(notificationRef, MessageType.success),
     error: typeFn(notificationRef, MessageType.error),
     info: typeFn(notificationRef, MessageType.info),
     warning: typeFn(notificationRef, MessageType.warning),
     warn: typeFn(notificationRef, MessageType.warn),
-    loading: (
-      contentOrConfig: ReactNode | Message,
-      duration = MESSAGE_GLOBAL_CONFIG.duration,
-      onClose?: () => void
-    ) => {
-      // loading method can be removed ( by key ) by return handle;
-      // so, it must has a uniq key
-      let key: number | string;
-      if (!isMessageConfig(contentOrConfig)) {
-        key = getDefalutKey();
-      } else {
-        const hasConfigHasKey =
-          contentOrConfig.key &&
-          (typeof contentOrConfig.key === "number" ||
-            typeof contentOrConfig.key === "string");
-
-        if (!hasConfigHasKey) {
-          key = getDefalutKey();
-        } else {
-          key = contentOrConfig.key as any;
-        }
-      }
-
-      typeFn(notificationRef, MessageType.loading)(
-        contentOrConfig,
-        duration,
-        onClose,
-        key
-      );
-      return () => {
-        notificationRef.destroy(key);
-      };
-    },
-    // TODO: global config
+    loading: typeFn(notificationRef, MessageType.loading),
     config: (config: MessageConfig) => {
       // 这里的配置项会分为两层抽象：
       // 一层是在当前层 Message:
@@ -228,8 +246,6 @@ function message() {
         notificationPropsAdaptorByConfig(config, ["maxCount", "prefixCls"])
       );
     },
-
-    // TODO: global destory
     destroy: (key?: string | number) => {
       notificationRef.destroy(key);
     }

@@ -13,24 +13,7 @@ export default function App() {
   // const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
-    message.open({
-      content: "haha",
-      // icon: null,
-      key: 0,
-      // duration: 0,
-      // className: "rotate",
-      // style: {
-      //   marginTop: "20vh",
-      //   paddingTop: "20px",
-      //   color: "red"
-      // },
-      onClick: () => {
-        message.destroy();
-      },
-      onClose: () => {
-        console.log("been closed...");
-      }
-    });
+    message.info("haha", 3, console.log);
   }, []);
 
   return (

@@ -51,7 +51,6 @@ const Notification = forwardRef(
       () => ({
         add: (notice: NoticeProps) => {
           const noticeKey = notice.noticeKey || getUuid();
-
           setNotices((prevNotices) => {
             const newNotices = [
               {
