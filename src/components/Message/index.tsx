@@ -5,6 +5,7 @@ import { ReactComponent as ErrorIcon } from "./assets/icons/close-circle-fill.sv
 import { ReactComponent as InfoIcon } from "./assets/icons/info-circle-fill.svg";
 import { ReactComponent as LoadingIcon } from "components/Message/assets/icons/loading.svg";
 import Config from "components/config";
+import useMessage from "./useMessage";
 import styles from "./index.module.css";
 
 const {
@@ -39,6 +40,24 @@ export interface MessageConfig {
   prefixCls?: string; // 消息节点的 className 前缀	默认 ant-message
   rtl?: boolean; // 是否开启 RTL 模式	boolean	false
   top?: number; // 消息距离顶部的位置	默认 8
+}
+
+type MessageHandleFn = (
+  contentOrConfig: ReactNode | Message,
+  duration?: any,
+  onClose?: (() => void) | undefined
+) => (() => void) | Promise<boolean>;
+
+export interface MessageHandlers {
+  open: MessageHandleFn;
+  success: MessageHandleFn;
+  error: MessageHandleFn;
+  info: MessageHandleFn;
+  warning: MessageHandleFn;
+  warn: MessageHandleFn;
+  loading: MessageHandleFn;
+  config: (config: MessageConfig) => void;
+  destroy: (key?: string | number) => void;
 }
 
 let seed = 0;
@@ -223,7 +242,7 @@ function message() {
     });
   };
 
-  return {
+  const handlers: MessageHandlers = {
     open: typeFn(notificationRef, null),
     success: typeFn(notificationRef, MessageType.success),
     error: typeFn(notificationRef, MessageType.error),
@@ -249,6 +268,11 @@ function message() {
     destroy: (key?: string | number) => {
       notificationRef.destroy(key);
     }
+  };
+
+  return {
+    useMessage: () => useMessage(handlers),
+    ...handlers
   };
 }
 
