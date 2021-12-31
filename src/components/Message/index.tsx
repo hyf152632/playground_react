@@ -148,7 +148,7 @@ function message() {
       if (!hasConfigHasKey) {
         key = getDefalutKey();
       } else {
-        key = contentOrConfig.key as any;
+        key = contentOrConfig.key as string | number;
       }
     }
 

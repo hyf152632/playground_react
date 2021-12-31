@@ -13,7 +13,16 @@ export default function App() {
   // const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
-    message.info("haha", 3, console.log);
+    // message.info("haha", 3, console.log);
+    const key = "updatable";
+
+    const openMessage = () => {
+      message.loading({ content: "Loading...", key });
+      setTimeout(() => {
+        message.success({ content: "Loaded!", key, duration: 2 });
+      }, 2000);
+    };
+    openMessage();
   }, []);
 
   return (

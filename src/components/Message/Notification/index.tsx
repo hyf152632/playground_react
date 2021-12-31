@@ -50,14 +50,24 @@ const Notification = forwardRef(
       ref,
       () => ({
         add: (notice: NoticeProps) => {
-          const noticeKey = notice.noticeKey || getUuid();
           setNotices((prevNotices) => {
+            const isCurrentNoticeHasSameKeyWithBeforeSomeone = prevNotices.some(
+              ({ key }) => key === notice.key
+            );
+            if (isCurrentNoticeHasSameKeyWithBeforeSomeone) {
+              return prevNotices.map((prevNotice) => {
+                if (prevNotice.key === notice.key) {
+                  return { ...notice, noticeKey: prevNotice.noticeKey };
+                }
+                return prevNotice;
+              });
+            }
+            const noticeKey = notice.noticeKey || getUuid();
             const newNotices = [
               {
                 ...notice,
                 noticeKey,
-                style: { ...(notice.style || {}), top: "65px" },
-                visible: true
+                style: { ...(notice.style || {}), top: "65px" }
               },
               ...prevNotices
             ].slice(0, integratedProps.maxCount);
