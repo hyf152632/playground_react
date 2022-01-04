@@ -12,15 +12,36 @@ import { render } from "react-dom";
 import Notice, { NoticeProps, NoticeImperativeHandles } from "./Notice";
 // import styles from "./index.module.css";
 
+export type NotificationAnimationType = "slide" | "fade";
+export type AnimationOrigin =
+  | "topLeft"
+  | "topCenter"
+  | "topRight"
+  | "rightTop"
+  | "rightCenter"
+  | "rigthBottom"
+  | "bottomLeft"
+  | "bottomCenter"
+  | "bottomRight"
+  | "leftTop"
+  | "leftCenter"
+  | "leftBottom";
+
 export interface NotificationProps {
   prefixCls?: string;
   className?: string;
   style?: CSSProperties;
-  transitionName?: string;
-  animation?: string | object;
+  transitionName?: NotificationAnimationType;
+  position?: AnimationOrigin;
   maxCount?: number;
   closeIcon?: React.ReactNode;
 }
+
+export type NotificationRootProps = Partial<
+  Pick<NotificationProps, "transitionName" | "position">
+> & {
+  rootElementId: string;
+};
 
 let seed = 0;
 const now = Date.now();
@@ -32,6 +53,7 @@ function getUuid() {
 }
 
 const default_zIndex = 1000;
+
 function getCurrentIndex() {
   let step = 1;
   const zIndexComm = getComputedStyle(
@@ -43,101 +65,162 @@ function getCurrentIndex() {
 }
 
 const defaultMaxCount = 10000;
+export const defaultPosition = "topCenter";
+export const defaultTransitionName = "slide";
 
-const Notification = forwardRef(
-  ({ maxCount = defaultMaxCount }: NotificationProps, ref) => {
-    const [notices, setNotices] = useState<NoticeProps[]>([]!);
-    // get same config from ref imperative handle
-    const [notificationPropsFromRef, setNotificationPropsFromRef] = useState<
-      NotificationProps
-    >({});
+const Notification = forwardRef((props: NotificationProps, ref) => {
+  const {
+    maxCount = defaultMaxCount,
+    transitionName = defaultTransitionName,
+    position = defaultPosition,
+    style = {}
+  } = props;
 
-    const noticeInstancesRef = useRef<NoticeImperativeHandles[]>([]);
+  const [notices, setNotices] = useState<NoticeProps[]>([]!);
+  // get same config from ref imperative handle
+  const [notificationPropsFromRef, setNotificationPropsFromRef] = useState<
+    NotificationProps
+  >();
 
-    const integratedProps = useMemo(
-      () => ({ maxCount, ...notificationPropsFromRef }),
-      [maxCount, notificationPropsFromRef]
-    );
+  const noticeInstancesRef = useRef<NoticeImperativeHandles[]>([]);
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        add: (notice: NoticeProps) => {
-          setNotices((prevNotices) => {
-            const isCurrentNoticeHasSameKeyWithBeforeSomeone = prevNotices.some(
-              ({ key }) => key === notice.key
-            );
-            if (isCurrentNoticeHasSameKeyWithBeforeSomeone) {
-              return prevNotices.map((prevNotice) => {
-                if (prevNotice.key === notice.key) {
-                  return { ...notice, noticeKey: prevNotice.noticeKey };
-                }
-                return prevNotice;
-              });
+  const integratedProps = useMemo(
+    () => ({
+      transitionName,
+      position,
+      maxCount,
+      style,
+      ...notificationPropsFromRef
+    }),
+    [maxCount, transitionName, position, style, notificationPropsFromRef]
+  );
+
+  const getPrevElementsAccuTransfromProps = useCallback(
+    (prevUserKeys: string[], initialVal: any) => {
+      let noticeInstancesRectAndStyleInfo = noticeInstancesRef.current.reduce<{
+        [key: string]: { rect: DOMRect; style: any };
+      }>((acc, curr: any) => {
+        if (curr && curr.getEleRect && curr.getEleStyle) {
+          const eleStyle = curr.getEleStyle();
+          return {
+            ...acc,
+            [String(curr.userKey)]: {
+              rect: curr.getEleRect(),
+              style: { top: (eleStyle && parseInt(eleStyle.top, 10)) || 0 }
             }
-            const noticeKey = notice.noticeKey || getUuid();
-            const injectedDefaultZIndex = getCurrentIndex();
-            const userKey = notice.key || noticeKey;
-
-            const newNotices = [
-              {
-                ...notice,
-                noticeKey,
-                userKey,
-                style: {
-                  zIndex: injectedDefaultZIndex,
-                  ...(notice.style || {}),
-                  top: "65px"
-                }
-              },
-              ...prevNotices
-            ].slice(0, integratedProps.maxCount);
-            return newNotices.map((noticeEach, index) => ({
-              ...noticeEach,
-              index
-            }));
-          });
-        },
-        // remove by call notice instance's close method to fire animation
-        // close method will call onShouldUnmountNotice prop
-        // in onShouldUnmountNotice handle to remove notice state.
-        remove: (key?: string | number) => {
-          const isNoKeyProvide =
-            typeof key !== "string" && typeof key !== "number";
-          // should clear all
-          if (isNoKeyProvide) {
-            noticeInstancesRef.current.forEach((ni) => {
-              if (ni) {
-                ni.close();
-              }
-            });
-            noticeInstancesRef.current = [];
-            return;
-          }
-
-          const currentInstance = noticeInstancesRef.current.find(
-            (ni) => ni.userKey === key
-          );
-
-          if (currentInstance) {
-            currentInstance.close();
-            noticeInstancesRef.current = noticeInstancesRef.current.filter(
-              (ni) => ni.userKey !== key
-            );
-          }
-        },
-        config: (options: NotificationProps) => {
-          setNotificationPropsFromRef((prev) => ({ ...prev, ...options }));
+          };
         }
-      }),
-      [integratedProps]
-    );
+        return acc;
+      }, {});
 
-    useEffect(() => {
-      console.log(notices, "----------- notices ------------");
-    }, [notices]);
+      return prevUserKeys.reduce((acc, curr) => {
+        const currentInstanceRectInfo = noticeInstancesRectAndStyleInfo[curr];
+        if (currentInstanceRectInfo) {
+          console.log(currentInstanceRectInfo.style.top, "----------- top");
+          return acc + currentInstanceRectInfo.rect.height + 8;
+        }
+        return acc;
+      }, initialVal);
+    },
+    []
+  );
 
-    const onUnmountNotice = useCallback((noticeKey) => {
+  useImperativeHandle(
+    ref,
+    () => ({
+      add: (notice: NoticeProps) => {
+        setNotices((prevNotices) => {
+          const isCurrentNoticeHasSameKeyWithBeforeSomeone = prevNotices.some(
+            ({ key }) => key === notice.key
+          );
+          if (isCurrentNoticeHasSameKeyWithBeforeSomeone) {
+            return prevNotices.map((prevNotice) => {
+              if (prevNotice.key === notice.key) {
+                return { ...notice, noticeKey: prevNotice.noticeKey };
+              }
+              return prevNotice;
+            });
+          }
+
+          const noticeKey = notice.noticeKey || getUuid();
+          const injectedDefaultZIndex = getCurrentIndex();
+          const userKey = notice.key || noticeKey;
+          const { position, transitionName, style } = integratedProps;
+
+          const newNotices = [
+            ...prevNotices.slice(0, integratedProps.maxCount - 1),
+            {
+              ...notice,
+              noticeKey,
+              userKey,
+              style: {
+                zIndex: injectedDefaultZIndex,
+                ...(notice.style || {}),
+                ...style
+              },
+              position,
+              transitionName
+            }
+          ];
+
+          return newNotices.reduce<NoticeProps[]>((acc, currNotice, index) => {
+            const prevElementsAccuTransfromProps = getPrevElementsAccuTransfromProps(
+              newNotices
+                .slice(0, index)
+                .map((ni) => String(ni.userKey || ni.noticeKey)),
+              0
+            );
+
+            return [
+              ...acc,
+              {
+                ...currNotice,
+                isLastElement: index === newNotices.length - 1,
+                prevElementsAccumulatedTranfromProp: {
+                  top: prevElementsAccuTransfromProps
+                }
+              }
+            ];
+          }, []);
+        });
+      },
+      // remove by call notice instance's close method to fire animation
+      // close method will call onShouldUnmountNotice prop
+      // in onShouldUnmountNotice handle to remove notice state.
+      remove: (key?: string | number) => {
+        const isNoKeyProvide =
+          typeof key !== "string" && typeof key !== "number";
+        // should clear all
+        if (isNoKeyProvide) {
+          noticeInstancesRef.current.forEach((ni) => {
+            if (ni) {
+              ni.close();
+            }
+          });
+          return;
+        }
+
+        const currentInstance = noticeInstancesRef.current.find(
+          (ni) => ni.userKey === key
+        );
+
+        if (currentInstance) {
+          currentInstance.close();
+        }
+      },
+      config: (options: NotificationProps) => {
+        setNotificationPropsFromRef((prev) => ({ ...prev, ...options }));
+      }
+    }),
+    [integratedProps, getPrevElementsAccuTransfromProps]
+  );
+
+  useEffect(() => {
+    console.log(notices, "----------- notices ------------");
+  }, [notices]);
+
+  const onUnmountNotice = useCallback(
+    (noticeKey) => {
       setNotices((prevNotices) => {
         const currentNotice = prevNotices.find(
           (notice) => notice.noticeKey === noticeKey
@@ -147,96 +230,170 @@ const Notification = forwardRef(
           currentNotice.onClose();
         }
 
+        noticeInstancesRef.current = noticeInstancesRef.current.filter(
+          (ni) =>
+            !(
+              ni.userKey === currentNotice?.noticeKey ||
+              ni.userKey === currentNotice?.userKey
+            )
+        );
+
+        // const currentNotices = prevNotices.filter((notice) => notice.noticeKey !== noticeKey)
+
         return prevNotices
           .filter((notice) => notice.noticeKey !== noticeKey)
-          .map((notice, index) => ({ ...notice, index }));
+          .map((notice, index, arr) => {
+            const prevElementsAccuTransfromProps = getPrevElementsAccuTransfromProps(
+              arr
+                .slice(0, index)
+                .map((ni) => String(ni.userKey || ni.noticeKey)),
+              0
+            );
+            return {
+              ...notice,
+              isLastElement: index === arr.length - 1,
+              prevElementsAccumulatedTranfromProp: {
+                top: prevElementsAccuTransfromProps
+              }
+            };
+          });
       });
-    }, []);
+    },
+    [getPrevElementsAccuTransfromProps]
+  );
 
-    // those props will be override by Notice props's same prop.
-    const {
-      className: classNameFromProps,
-      style: styleFromProps = {},
-      prefixCls: prefixClsFromProps
-    } = integratedProps;
+  // those props will be override by Notice props's same prop.
+  const {
+    className: classNameFromProps,
+    style: styleFromProps = {},
+    prefixCls: prefixClsFromProps
+  } = integratedProps;
 
-    return (
-      <>
-        {notices.map((notice, index) => {
-          const {
-            prefixCls,
-            style = {},
-            className,
-            duration,
-            children,
-            noticeKey,
-            userKey,
-            closeIcon,
-            closable,
-            divProps,
-            onClick,
-            onClose
-          } = notice;
+  return (
+    <>
+      {notices.map((notice) => {
+        const {
+          prefixCls,
+          style = {},
+          className,
+          duration,
+          children,
+          noticeKey,
+          userKey,
+          closeIcon,
+          closable,
+          divProps,
+          onClick,
+          onClose,
+          isLastElement,
+          _rootPosition,
+          _animationName,
+          prevElementsAccumulatedTranfromProp
+        } = notice;
 
-          return (
-            <Notice
-              ref={(noticeRef) => {
-                if (noticeRef) {
-                  const cachedNoticeInstances = noticeInstancesRef.current;
-                  const isCurrentInstancesHasBeenCached = cachedNoticeInstances.find(
-                    (ninstance) => ninstance?.userKey === noticeRef?.userKey
-                  );
-                  if (!isCurrentInstancesHasBeenCached) {
-                    noticeInstancesRef.current = [
-                      ...noticeInstancesRef.current,
-                      noticeRef
-                    ];
-                  }
+        return (
+          <Notice
+            ref={(noticeRef) => {
+              if (noticeRef) {
+                const cachedNoticeInstances = noticeInstancesRef.current;
+                const isCurrentInstancesHasBeenCached = cachedNoticeInstances.find(
+                  (ninstance) => ninstance?.userKey === noticeRef?.userKey
+                );
+                if (!isCurrentInstancesHasBeenCached) {
+                  noticeInstancesRef.current = [
+                    ...noticeInstancesRef.current,
+                    noticeRef
+                  ];
                 }
-                console.log(noticeRef, "---------- noticeRef");
-              }}
-              onShouldUnmountNotice={onUnmountNotice}
-              className={className || classNameFromProps}
-              style={{ ...styleFromProps, ...style }}
-              prefixCls={prefixCls || prefixClsFromProps}
-              duration={duration}
-              children={children}
-              noticeKey={noticeKey}
-              userKey={userKey}
-              closeIcon={closeIcon}
-              closable={closable}
-              divProps={divProps}
-              onClick={onClick}
-              onClose={onClose}
-              key={notice.noticeKey}
-              index={index}
-            />
-          );
-        })}
-      </>
-    );
-  }
-);
+              }
+            }}
+            onShouldUnmountNotice={onUnmountNotice}
+            className={className || classNameFromProps}
+            style={{ ...styleFromProps, ...style }}
+            prefixCls={prefixCls || prefixClsFromProps}
+            duration={duration}
+            children={children}
+            noticeKey={noticeKey}
+            userKey={userKey}
+            closeIcon={closeIcon}
+            closable={closable}
+            divProps={divProps}
+            onClick={onClick}
+            onClose={onClose}
+            key={notice.noticeKey}
+            isLastElement={isLastElement}
+            _rootPosition={_rootPosition}
+            _animationName={_animationName}
+            prevElementsAccumulatedTranfromProp={
+              prevElementsAccumulatedTranfromProp
+            }
+          />
+        );
+      })}
+    </>
+  );
+});
 
-const notificationCreator = () => (callback: any) => {
-  let notificationRoot = document.querySelector("#notification_root");
-  if (!notificationRoot) {
-    const div = document.createElement("div");
-    div.id = "notification_root";
-    div.style.position = "fixed";
-    div.style.top = "0";
-    div.style.left = "50%";
-    div.style.display = "relative";
-    document.body.appendChild(div);
-    notificationRoot = div;
+const genRootElementId = (id: string) => {
+  return `notification_root__${id}`;
+};
+
+const genNotificationRoot = (id: string, position: AnimationOrigin) => {
+  let notificationRoot = document.querySelector(`#${id}`);
+  if (notificationRoot) {
+    return notificationRoot;
   }
+
+  const div = document.createElement("div");
+  div.id = id;
+  div.style.position = "fixed";
+  div.style.display = "relative";
+  document.body.appendChild(div);
+
+  const positionConds = {
+    topCenter: () => {
+      div.style.top = "0";
+      div.style.left = "50%";
+    },
+    rightTop: () => {
+      div.style.top = "0";
+      div.style.right = "0";
+    },
+    rigthBottom: () => {
+      div.style.bottom = "0";
+      div.style.right = "0";
+    }
+  } as any;
+
+  if (positionConds[position]) {
+    positionConds[position]();
+  }
+
+  return div;
+};
+
+const notificationCreator = () => (
+  callback: any,
+  {
+    position = "topCenter",
+    transitionName = "slide",
+    rootElementId
+  }: NotificationRootProps
+) => {
+  const notificationRoot = genNotificationRoot(
+    genRootElementId(rootElementId),
+    position
+  );
 
   render(
     <Notification
+      transitionName={transitionName}
+      position={position}
       ref={(ref: any) => {
         if (!ref) {
           return;
         }
+
         const handles = {
           notice(noticeProps: NoticeProps) {
             ref.add(noticeProps);

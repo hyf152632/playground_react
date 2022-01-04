@@ -1,4 +1,4 @@
-import { CSSProperties, ReactNode } from "react";
+import { CSSProperties, ReactNode, useMemo } from "react";
 import notificationCreator, { NotificationProps } from "./Notification/index";
 import { ReactComponent as SuccessIcon } from "./assets/icons/check-circle-fill.svg";
 import { ReactComponent as ErrorIcon } from "./assets/icons/close-circle-fill.svg";
@@ -78,7 +78,10 @@ function isMessageConfig(input: Message | ReactNode): input is Message {
 
 // This global config can be changed by message.config use updateMessageGlobalConfig()
 const MESSAGE_GLOBAL_CONFIG: { [key: string]: any } = {
-  duration: 3
+  duration: 3,
+  style: {
+    top: 8
+  }
 };
 
 const extractKeyFromObj = (
@@ -113,7 +116,9 @@ const notificationPropsAdaptorByConfig = (
 
 function message() {
   let notificationRef: any;
-  notificationCreator((notification: any) => (notificationRef = notification));
+  notificationCreator((notification: any) => (notificationRef = notification), {
+    rootElementId: "rc_message_root"
+  });
 
   function genWrappedChildenByType(
     type: MessageType | null,
@@ -198,6 +203,10 @@ function message() {
         ...MESSAGE_GLOBAL_CONFIG,
         duration,
         ...contentOrConfig,
+        style: {
+          ...(MESSAGE_GLOBAL_CONFIG.style || {}),
+          ...(contentOrConfig.style || {})
+        },
         onClose: wrappedOnClose,
         children: genWrappedChildenByType(type, content, icon)
       });

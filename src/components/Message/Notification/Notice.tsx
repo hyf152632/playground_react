@@ -1,14 +1,22 @@
 import {
-  CSSProperties,
-  useRef,
   useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  useMemo,
   forwardRef,
   useImperativeHandle,
   ForwardedRef,
-  useCallback
+  CSSProperties
 } from "react";
 import { ReactComponent as CloseIcon } from "components/Message/assets/icons/close-circle.svg";
 import styles from "./index.module.css";
+import {
+  defaultPosition,
+  defaultTransitionName,
+  NotificationAnimationType,
+  AnimationOrigin
+} from "./index";
 
 interface DivProps extends React.HTMLProps<HTMLDivElement> {
   // Ideally we would allow all data-* props but this would depend on https://github.com/microsoft/TypeScript/issues/28960
@@ -33,6 +41,10 @@ export interface NoticeProps {
 
   /** @private Only for internal usage. We don't promise that we will refactor this */
   holder?: HTMLDivElement;
+  _rootPosition?: AnimationOrigin;
+  _animationName?: NotificationAnimationType;
+  isLastElement?: boolean;
+  prevElementsAccumulatedTranfromProp: CSSProperties;
 }
 
 export interface NoticeContent
@@ -55,6 +67,8 @@ function getHideNoticeAnimationEndState(element: HTMLDivElement | null) {
 export interface NoticeImperativeHandles {
   close: () => void;
   userKey: string | number | undefined;
+  getEleRect: () => DOMRect | undefined;
+  getEleStyle: () => CSSStyleDeclaration | undefined;
 }
 
 const Notice = (
@@ -63,42 +77,51 @@ const Notice = (
     children,
     style,
     className,
-    index,
     duration = 0,
     onShouldUnmountNotice,
     noticeKey,
     onClick,
     closable = true,
-    closeIcon
+    closeIcon,
+    _rootPosition = defaultPosition,
+    _animationName = defaultTransitionName,
+    isLastElement,
+    prevElementsAccumulatedTranfromProp
   }: NoticeProps & {
-    index: number;
     onShouldUnmountNotice: (noticeKey: React.Key) => void;
   },
   ref: ForwardedRef<NoticeImperativeHandles>
 ) => {
   const noticeRef = useRef<HTMLDivElement>(null);
-  const isMountRef = useRef(true);
+  const isMountRef = useRef(false);
 
   const handleUnmountAnimation = useCallback(
     (afterAnimationFinishedCb?: Function) => {
-      var player = noticeRef.current?.animate(
-        [
-          { transform: `translateY(0px)`, opacity: 1 },
-          { transform: `translateY(${-(index * 65 + 100)}px)`, opacity: 0 }
-        ],
-        {
-          duration: 300,
-          easing: "cubic-bezier(0,0,0.32,1)",
-          fill: "forwards"
-        }
-      );
+      if (!noticeRef.current) {
+        return;
+      }
+
+      const { top, height } = noticeRef.current.getBoundingClientRect();
+
+      const animationStart = {
+        transform: `translateY(0px)`
+      };
+      const animationEnd = {
+        transform: `translateY(${-(top + height)}px)`
+      };
+
+      var player = noticeRef.current?.animate([animationStart, animationEnd], {
+        duration: 300,
+        easing: "cubic-bezier(0,0,0.32,1)",
+        fill: "forwards"
+      });
 
       player?.addEventListener(
         "finish",
         () => afterAnimationFinishedCb && afterAnimationFinishedCb()
       );
     },
-    [noticeRef, index]
+    [noticeRef]
   );
 
   const handleOnShouldUnmountNotice = useCallback(() => {
@@ -113,7 +136,9 @@ const Notice = (
       close: () => {
         handleUnmountAnimation(handleOnShouldUnmountNotice);
       },
-      userKey
+      userKey,
+      getEleRect: () => noticeRef.current?.getBoundingClientRect(),
+      getEleStyle: () => noticeRef.current?.style
     }),
     [handleUnmountAnimation, handleOnShouldUnmountNotice, userKey]
   );
@@ -134,8 +159,37 @@ const Notice = (
     };
   }, [duration, handleUnmountAnimation, handleOnShouldUnmountNotice]);
 
-  useEffect(() => {
-    if (index === 0 && isMountRef.current) {
+  const handleClose = useCallback(() => {
+    if (!closable) {
+      return;
+    }
+    handleUnmountAnimation(handleOnShouldUnmountNotice);
+  }, [closable, handleUnmountAnimation, handleOnShouldUnmountNotice]);
+
+  const computedAnimationStyle = useMemo(() => {
+    // if(_animationName === '') {}
+    let styleObj = {};
+    if (
+      _rootPosition === "topLeft" ||
+      _rootPosition === "topCenter" ||
+      _rootPosition === "topRight"
+    ) {
+      styleObj = {
+        ...styleObj,
+        top:
+          (Number(
+            prevElementsAccumulatedTranfromProp &&
+              prevElementsAccumulatedTranfromProp.top
+          ) || 0) +
+          ((style && style.top && parseInt(style.top as any, 10)) || 0)
+      };
+    }
+    return styleObj;
+  }, [_rootPosition, style, prevElementsAccumulatedTranfromProp]);
+
+  // animation when mount
+  useLayoutEffect(() => {
+    if (!isMountRef.current) {
       noticeRef.current?.animate(
         [{ transform: `translateY(-100px)` }, { transform: `translateY(0px)` }],
         {
@@ -144,23 +198,15 @@ const Notice = (
           fill: "forwards"
         }
       );
-
-      isMountRef.current = false;
+      isMountRef.current = true;
     }
-  }, [index]);
-
-  const handleClose = useCallback(() => {
-    if (!closable) {
-      return;
-    }
-    handleUnmountAnimation(handleOnShouldUnmountNotice);
-  }, [closable, handleUnmountAnimation, handleOnShouldUnmountNotice]);
+  });
 
   return (
     <div
       ref={noticeRef}
       className={`${styles.notice_wrapper} ${className}`}
-      style={{ ...style, top: `${(index + 1) * 65}px` }}
+      style={{ ...style, ...computedAnimationStyle }}
       onClick={onClick}
     >
       {children}

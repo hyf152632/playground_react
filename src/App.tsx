@@ -39,9 +39,20 @@ export default function App() {
         onClick={() => {
           message.success({
             style: {
-              zIndex: 10
+              // zIndex: 10
+              top: 40
             },
-            content: "ooo" + counter++,
+            content: (
+              <div>
+                haha
+                <br />
+                oo
+                <br /> oo
+                <br />
+                oeiowe
+                <br />
+              </div>
+            ),
             duration: 0,
             onClick: () => {
               message.destroy();
