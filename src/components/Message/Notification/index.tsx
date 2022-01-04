@@ -31,6 +31,17 @@ function getUuid() {
   return `rcNotification_${now}_${id}`;
 }
 
+const default_zIndex = 1000;
+function getCurrentIndex() {
+  let step = 1;
+  const zIndexComm = getComputedStyle(
+    document.documentElement,
+    ":root"
+  ).getPropertyValue("--z-index-1000");
+
+  return (Number(zIndexComm) || default_zIndex) + seed * step;
+}
+
 const defaultMaxCount = 10000;
 
 const Notification = forwardRef(
@@ -63,11 +74,17 @@ const Notification = forwardRef(
               });
             }
             const noticeKey = notice.noticeKey || getUuid();
+            const injectedDefaultZIndex = getCurrentIndex();
+
             const newNotices = [
               {
                 ...notice,
                 noticeKey,
-                style: { ...(notice.style || {}), top: "65px" }
+                style: {
+                  zIndex: injectedDefaultZIndex,
+                  ...(notice.style || {}),
+                  top: "65px"
+                }
               },
               ...prevNotices
             ].slice(0, integratedProps.maxCount);

@@ -38,6 +38,9 @@ export default function App() {
         }}
         onClick={() => {
           message.success({
+            style: {
+              zIndex: 10
+            },
             content: "ooo" + counter++,
             duration: 0,
             onClick: () => {

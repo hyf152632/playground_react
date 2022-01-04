@@ -10,7 +10,7 @@
   --border-radius-bigger: 4px;
 
   /* z-index */
-  --z-index-100: 100;
-  --z-index-1000: 1000;
+  --z-index-100: 100; /* modal */
+  --z-index-1000: 1000; /* message, notification */
   --z-index-10000: 10000;
 }
