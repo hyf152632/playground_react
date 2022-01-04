@@ -7,6 +7,7 @@ import {
   ForwardedRef,
   useCallback
 } from "react";
+import { ReactComponent as CloseIcon } from "components/Message/assets/icons/close-circle.svg";
 import styles from "./index.module.css";
 
 interface DivProps extends React.HTMLProps<HTMLDivElement> {
@@ -66,7 +67,9 @@ const Notice = (
     duration = 0,
     onShouldUnmountNotice,
     noticeKey,
-    onClick
+    onClick,
+    closable = true,
+    closeIcon
   }: NoticeProps & {
     index: number;
     onShouldUnmountNotice: (noticeKey: React.Key) => void;
@@ -146,6 +149,13 @@ const Notice = (
     }
   }, [index]);
 
+  const handleClose = useCallback(() => {
+    if (!closable) {
+      return;
+    }
+    handleUnmountAnimation(handleOnShouldUnmountNotice);
+  }, [closable, handleUnmountAnimation, handleOnShouldUnmountNotice]);
+
   return (
     <div
       ref={noticeRef}
@@ -154,6 +164,15 @@ const Notice = (
       onClick={onClick}
     >
       {children}
+      {closable && (
+        <section
+          className={styles.notice_close_icon_wrapper}
+          onClick={handleClose}
+        >
+          {closeIcon}
+          {!closeIcon && <CloseIcon />}
+        </section>
+      )}
     </div>
   );
 };

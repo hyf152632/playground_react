@@ -7,6 +7,23 @@
     rgba(0, 0, 0, 0.3) 0px 3px 7px -3px;
 }
 
+.notice_close_icon_wrapper {
+  visibility: hidden;
+  opacity: 0;
+  cursor: pointer;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transform: translate3d(50%, -25%, 0);
+  transition: opacity 0.3s;
+}
+
+.notice_wrapper:hover .notice_close_icon_wrapper {
+  display: block;
+  opacity: 1;
+  visibility: visible;
+}
+
 .fade_in {
   animation: fade_in 0.3s ease-in forwards;
 }
