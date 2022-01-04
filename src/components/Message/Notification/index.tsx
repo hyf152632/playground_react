@@ -1,6 +1,6 @@
 import {
   useState,
-  // useRef,
+  useRef,
   useImperativeHandle,
   useEffect,
   useMemo,
@@ -9,7 +9,7 @@ import {
   CSSProperties
 } from "react";
 import { render } from "react-dom";
-import Notice, { NoticeProps } from "./Notice";
+import Notice, { NoticeProps, NoticeImperativeHandles } from "./Notice";
 // import styles from "./index.module.css";
 
 export interface NotificationProps {
@@ -46,11 +46,13 @@ const defaultMaxCount = 10000;
 
 const Notification = forwardRef(
   ({ maxCount = defaultMaxCount }: NotificationProps, ref) => {
-    const [notices, setNotices] = useState<NoticeProps[]>([]);
+    const [notices, setNotices] = useState<NoticeProps[]>([]!);
     // get same config from ref imperative handle
     const [notificationPropsFromRef, setNotificationPropsFromRef] = useState<
       NotificationProps
     >({});
+
+    const noticeInstancesRef = useRef<NoticeImperativeHandles[]>([]);
 
     const integratedProps = useMemo(
       () => ({ maxCount, ...notificationPropsFromRef }),
@@ -75,11 +77,13 @@ const Notification = forwardRef(
             }
             const noticeKey = notice.noticeKey || getUuid();
             const injectedDefaultZIndex = getCurrentIndex();
+            const userKey = notice.key || noticeKey;
 
             const newNotices = [
               {
                 ...notice,
                 noticeKey,
+                userKey,
                 style: {
                   zIndex: injectedDefaultZIndex,
                   ...(notice.style || {}),
@@ -94,14 +98,33 @@ const Notification = forwardRef(
             }));
           });
         },
+        // remove by call notice instance's close method to fire animation
+        // close method will call onShouldUnmountNotice prop
+        // in onShouldUnmountNotice handle to remove notice state.
         remove: (key?: string | number) => {
-          if (typeof key !== "string" && typeof key !== "number") {
-            setNotices([]);
+          const isNoKeyProvide =
+            typeof key !== "string" && typeof key !== "number";
+          // should clear all
+          if (isNoKeyProvide) {
+            noticeInstancesRef.current.forEach((ni) => {
+              if (ni) {
+                ni.close();
+              }
+            });
+            noticeInstancesRef.current = [];
             return;
           }
-          setNotices((prevNotices) => {
-            return prevNotices.filter((msg) => msg.key !== key);
-          });
+
+          const currentInstance = noticeInstancesRef.current.find(
+            (ni) => ni.userKey === key
+          );
+
+          if (currentInstance) {
+            currentInstance.close();
+            noticeInstancesRef.current = noticeInstancesRef.current.filter(
+              (ni) => ni.userKey !== key
+            );
+          }
         },
         config: (options: NotificationProps) => {
           setNotificationPropsFromRef((prev) => ({ ...prev, ...options }));
@@ -147,6 +170,7 @@ const Notification = forwardRef(
             duration,
             children,
             noticeKey,
+            userKey,
             closeIcon,
             closable,
             divProps,
@@ -156,6 +180,21 @@ const Notification = forwardRef(
 
           return (
             <Notice
+              ref={(noticeRef) => {
+                if (noticeRef) {
+                  const cachedNoticeInstances = noticeInstancesRef.current;
+                  const isCurrentInstancesHasBeenCached = cachedNoticeInstances.find(
+                    (ninstance) => ninstance?.userKey === noticeRef?.userKey
+                  );
+                  if (!isCurrentInstancesHasBeenCached) {
+                    noticeInstancesRef.current = [
+                      ...noticeInstancesRef.current,
+                      noticeRef
+                    ];
+                  }
+                }
+                console.log(noticeRef, "---------- noticeRef");
+              }}
               onShouldUnmountNotice={onUnmountNotice}
               className={className || classNameFromProps}
               style={{ ...styleFromProps, ...style }}
@@ -163,6 +202,7 @@ const Notification = forwardRef(
               duration={duration}
               children={children}
               noticeKey={noticeKey}
+              userKey={userKey}
               closeIcon={closeIcon}
               closable={closable}
               divProps={divProps}

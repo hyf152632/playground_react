@@ -1,4 +1,12 @@
-import { CSSProperties, useRef, useEffect } from "react";
+import {
+  CSSProperties,
+  useRef,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+  ForwardedRef,
+  useCallback
+} from "react";
 import styles from "./index.module.css";
 
 interface DivProps extends React.HTMLProps<HTMLDivElement> {
@@ -15,6 +23,7 @@ export interface NoticeProps {
   /** Mark as final key since set maxCount may keep the key but user pass key is different */
   noticeKey: React.Key;
   key?: string | number;
+  userKey?: string | number; // same as key, used when use manually remove a Notice
   closeIcon?: React.ReactNode;
   closable?: boolean;
   divProps?: DivProps;
@@ -42,33 +51,33 @@ function getHideNoticeAnimationEndState(element: HTMLDivElement | null) {
   }
 }
 
-const Notice = ({
-  children,
-  style,
-  className,
-  index,
-  duration = 0,
-  onShouldUnmountNotice,
-  noticeKey,
-  onClick
-}: NoticeProps & {
-  index: number;
-  onShouldUnmountNotice: (noticeKey: React.Key) => void;
-}) => {
+export interface NoticeImperativeHandles {
+  close: () => void;
+  userKey: string | number | undefined;
+}
+
+const Notice = (
+  {
+    userKey,
+    children,
+    style,
+    className,
+    index,
+    duration = 0,
+    onShouldUnmountNotice,
+    noticeKey,
+    onClick
+  }: NoticeProps & {
+    index: number;
+    onShouldUnmountNotice: (noticeKey: React.Key) => void;
+  },
+  ref: ForwardedRef<NoticeImperativeHandles>
+) => {
   const noticeRef = useRef<HTMLDivElement>(null);
   const isMountRef = useRef(true);
 
-  // handle hide animation before unmount;
-  useEffect(() => {
-    if (!duration) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      const animationEndState = getHideNoticeAnimationEndState(
-        noticeRef.current
-      );
-
+  const handleUnmountAnimation = useCallback(
+    (afterAnimationFinishedCb?: Function) => {
       var player = noticeRef.current?.animate(
         [
           { transform: `translateY(0px)`, opacity: 1 },
@@ -81,17 +90,46 @@ const Notice = ({
         }
       );
 
-      player?.addEventListener("finish", () => {
-        if (onShouldUnmountNotice) {
-          onShouldUnmountNotice(noticeKey);
-        }
-      });
-    }, duration * 1000);
+      player?.addEventListener(
+        "finish",
+        () => afterAnimationFinishedCb && afterAnimationFinishedCb()
+      );
+    },
+    [noticeRef, index]
+  );
+
+  const handleOnShouldUnmountNotice = useCallback(() => {
+    if (onShouldUnmountNotice) {
+      onShouldUnmountNotice(noticeKey);
+    }
+  }, [onShouldUnmountNotice, noticeKey]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      close: () => {
+        handleUnmountAnimation(handleOnShouldUnmountNotice);
+      },
+      userKey
+    }),
+    [handleUnmountAnimation, handleOnShouldUnmountNotice, userKey]
+  );
+
+  // handle auto hide with animation before unmount;
+  useEffect(() => {
+    if (!duration) {
+      return;
+    }
+
+    const timer = setTimeout(
+      () => handleUnmountAnimation(handleOnShouldUnmountNotice),
+      duration * 1000
+    );
 
     return () => {
       clearTimeout(timer);
     };
-  }, [noticeKey, duration, onShouldUnmountNotice, index]);
+  }, [duration, handleUnmountAnimation, handleOnShouldUnmountNotice]);
 
   useEffect(() => {
     if (index === 0 && isMountRef.current) {
@@ -120,4 +158,4 @@ const Notice = ({
   );
 };
 
-export default Notice;
+export default forwardRef(Notice);

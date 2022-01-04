@@ -44,7 +44,7 @@ export default function App() {
             content: "ooo" + counter++,
             duration: 0,
             onClick: () => {
-              message.destroy(0);
+              message.destroy();
             }
           });
         }}
