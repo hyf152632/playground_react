@@ -80,7 +80,8 @@ function isMessageConfig(input: Message | ReactNode): input is Message {
 const MESSAGE_GLOBAL_CONFIG: { [key: string]: any } = {
   duration: 3,
   style: {
-    top: 8
+    top: 8,
+    borderTop: "1px solid red"
   }
 };
 

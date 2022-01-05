@@ -6,7 +6,8 @@ import {
   useMemo,
   forwardRef,
   useCallback,
-  CSSProperties
+  CSSProperties,
+  RefObject
 } from "react";
 import { render } from "react-dom";
 import Notice, { NoticeProps, NoticeImperativeHandles } from "./Notice";
@@ -97,27 +98,41 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
 
   const getPrevElementsAccuTransfromProps = useCallback(
     (prevUserKeys: string[], initialVal: any) => {
-      let noticeInstancesRectAndStyleInfo = noticeInstancesRef.current.reduce<{
-        [key: string]: { rect: DOMRect; style: any };
-      }>((acc, curr: any) => {
-        if (curr && curr.getEleRect && curr.getEleStyle) {
-          const eleStyle = curr.getEleStyle();
+      let noticeInstancesAnimationInfo = noticeInstancesRef.current.reduce<{
+        [key: string]: {
+          animationRelativeProps: { [key: string]: any };
+          style: CSSProperties;
+        };
+      }>((acc, curr: NoticeImperativeHandles) => {
+        if (curr) {
           return {
             ...acc,
             [String(curr.userKey)]: {
-              rect: curr.getEleRect(),
-              style: { top: (eleStyle && parseInt(eleStyle.top, 10)) || 0 }
+              style: (curr as any).getEleOriginStyle(),
+              animationRelativeProps: (curr as any).getAnimationRelativePropsInfo()
             }
           };
         }
         return acc;
       }, {});
 
+      // get accumulated props by all prevElements relatived props.
       return prevUserKeys.reduce((acc, curr) => {
-        const currentInstanceRectInfo = noticeInstancesRectAndStyleInfo[curr];
-        if (currentInstanceRectInfo) {
-          console.log(currentInstanceRectInfo.style.top, "----------- top");
-          return acc + currentInstanceRectInfo.rect.height + 8;
+        const currentEleInfo = noticeInstancesAnimationInfo[curr];
+
+        if (currentEleInfo) {
+          const {
+            style: { top },
+            animationRelativeProps: { marginTop, marginBottom, height }
+          } = currentEleInfo;
+
+          return (
+            acc +
+            (typeof top === "number" ? top * 2 : 0) +
+            marginTop +
+            height +
+            marginBottom
+          );
         }
         return acc;
       }, initialVal);
@@ -271,7 +286,7 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
 
   return (
     <>
-      {notices.map((notice) => {
+      {notices.map((notice, index) => {
         const {
           prefixCls,
           style = {},
@@ -300,10 +315,11 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
                   (ninstance) => ninstance?.userKey === noticeRef?.userKey
                 );
                 if (!isCurrentInstancesHasBeenCached) {
-                  noticeInstancesRef.current = [
-                    ...noticeInstancesRef.current,
-                    noticeRef
-                  ];
+                  noticeInstancesRef.current[index] = noticeRef;
+                  // noticeInstancesRef.current = [
+                  //   ...noticeInstancesRef.current,
+
+                  // ];
                 }
               }
             }}

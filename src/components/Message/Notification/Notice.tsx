@@ -9,7 +9,7 @@ import {
   ForwardedRef,
   CSSProperties
 } from "react";
-import { ReactComponent as CloseIcon } from "components/Message/assets/icons/close-circle.svg";
+import { ReactComponent as CloseIcon } from "components/Message/assets/icons/close-circle-fill.svg";
 import styles from "./index.module.css";
 import {
   defaultPosition,
@@ -69,13 +69,17 @@ export interface NoticeImperativeHandles {
   userKey: string | number | undefined;
   getEleRect: () => DOMRect | undefined;
   getEleStyle: () => CSSStyleDeclaration | undefined;
+  getAnimationRelativePropsInfo: () =>
+    | { marginTop: number; marginBottom: number; height: number }
+    | undefined;
+  getEleOriginStyle: () => CSSProperties;
 }
 
 const Notice = (
   {
     userKey,
     children,
-    style,
+    style = {},
     className,
     duration = 0,
     onShouldUnmountNotice,
@@ -137,10 +141,28 @@ const Notice = (
         handleUnmountAnimation(handleOnShouldUnmountNotice);
       },
       userKey,
+      getAnimationRelativePropsInfo: () => {
+        if (!noticeRef.current) {
+          return;
+        }
+
+        return {
+          marginTop: parseInt(
+            getComputedStyle(noticeRef.current).marginTop,
+            10
+          ),
+          marginBottom: parseInt(
+            getComputedStyle(noticeRef.current).marginBottom,
+            10
+          ),
+          height: parseInt(getComputedStyle(noticeRef.current).height, 10)
+        };
+      },
       getEleRect: () => noticeRef.current?.getBoundingClientRect(),
-      getEleStyle: () => noticeRef.current?.style
+      getEleStyle: () => noticeRef.current?.style,
+      getEleOriginStyle: () => style
     }),
-    [handleUnmountAnimation, handleOnShouldUnmountNotice, userKey]
+    [handleUnmountAnimation, handleOnShouldUnmountNotice, userKey, style]
   );
 
   // handle auto hide with animation before unmount;
@@ -200,7 +222,7 @@ const Notice = (
       );
       isMountRef.current = true;
     }
-  });
+  }, []);
 
   return (
     <div
