@@ -8,10 +8,14 @@ import "./styles.css";
 
 let counter = 0;
 
+message.config({
+  maxCount: 2
+});
+
 export default function App() {
   // const theme = useTheme();
   // const [inputValue, setInputValue] = useState("");
-  const [messageApis] = message.useMessage();
+  // const [messageApis] = message.useMessage();
 
   useEffect(() => {
     // message.info("haha", 3, console.log);
@@ -23,9 +27,9 @@ export default function App() {
         message.success({ content: "Loaded!", key, duration: 2 });
       }, 2000);
     };
-    // openMessage();
+    openMessage();
 
-    messageApis.success("oo");
+    // messageApis.success("oo");
   }, []);
 
   return (
@@ -40,7 +44,6 @@ export default function App() {
           message.success({
             style: {
               // zIndex: 10
-              top: 40,
               marginTop: 20
             },
             content: (

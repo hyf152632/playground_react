@@ -43,7 +43,6 @@ export interface NoticeProps {
   holder?: HTMLDivElement;
   _rootPosition?: AnimationOrigin;
   _animationName?: NotificationAnimationType;
-  isLastElement?: boolean;
   prevElementsAccumulatedTranfromProp: CSSProperties;
 }
 
@@ -56,12 +55,6 @@ export interface NoticeContent
   key?: React.Key;
   content?: React.ReactNode;
   onClose?: () => void;
-}
-
-function getHideNoticeAnimationEndState(element: HTMLDivElement | null) {
-  if (!element) {
-    return {};
-  }
 }
 
 export interface NoticeImperativeHandles {
@@ -89,7 +82,6 @@ const Notice = (
     closeIcon,
     _rootPosition = defaultPosition,
     _animationName = defaultTransitionName,
-    isLastElement,
     prevElementsAccumulatedTranfromProp
   }: NoticeProps & {
     onShouldUnmountNotice: (noticeKey: React.Key) => void;
@@ -107,14 +99,26 @@ const Notice = (
 
       const { top, height } = noticeRef.current.getBoundingClientRect();
 
-      const animationStart = {
-        transform: `translateY(0px)`
-      };
-      const animationEnd = {
-        transform: `translateY(${-(top + height)}px)`
-      };
+      const animationStartMaps = new Map<
+        NotificationAnimationType,
+        CSSProperties
+      >([
+        ["slide", { transform: `translateY(0px)` }],
+        ["fade", { opacity: 1 }]
+      ]);
 
-      var player = noticeRef.current?.animate([animationStart, animationEnd], {
+      const animationEndMaps = new Map<
+        NotificationAnimationType,
+        CSSProperties
+      >([
+        ["slide", { transform: `translateY(${-(top + height)}px)` }],
+        ["fade", { opacity: 0 }]
+      ]);
+
+      const start = animationStartMaps.get(_animationName) as any;
+      const end = animationEndMaps.get(_animationName) as any;
+
+      var player = noticeRef.current?.animate([start, end], {
         duration: 300,
         easing: "cubic-bezier(0,0,0.32,1)",
         fill: "forwards"
@@ -125,7 +129,7 @@ const Notice = (
         () => afterAnimationFinishedCb && afterAnimationFinishedCb()
       );
     },
-    [noticeRef]
+    [_animationName]
   );
 
   const handleOnShouldUnmountNotice = useCallback(() => {
@@ -212,17 +216,33 @@ const Notice = (
   // animation when mount
   useLayoutEffect(() => {
     if (!isMountRef.current) {
-      noticeRef.current?.animate(
-        [{ transform: `translateY(-100px)` }, { transform: `translateY(0px)` }],
-        {
-          duration: 300,
-          easing: "cubic-bezier(0,0,0.32,1)",
-          fill: "forwards"
-        }
-      );
+      const animationStartMaps = new Map<
+        NotificationAnimationType,
+        CSSProperties
+      >([
+        ["slide", { transform: `translateY(-100px)` }],
+        ["fade", { opacity: 0 }]
+      ]);
+
+      const animationEndMaps = new Map<
+        NotificationAnimationType,
+        CSSProperties
+      >([
+        ["slide", { transform: `translateY(0px)` }],
+        ["fade", { opacity: 1 }]
+      ]);
+
+      const start = animationStartMaps.get(_animationName) as any;
+      const end = animationEndMaps.get(_animationName) as any;
+
+      noticeRef.current?.animate([start, end], {
+        duration: 300,
+        easing: "cubic-bezier(0,0,0.32,1)",
+        fill: "forwards"
+      });
       isMountRef.current = true;
     }
-  }, []);
+  }, [_animationName]);
 
   return (
     <div

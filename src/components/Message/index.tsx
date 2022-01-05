@@ -1,4 +1,4 @@
-import { CSSProperties, ReactNode, useMemo } from "react";
+import { CSSProperties, ReactNode } from "react";
 import notificationCreator, { NotificationProps } from "./Notification/index";
 import { ReactComponent as SuccessIcon } from "./assets/icons/check-circle-fill.svg";
 import { ReactComponent as ErrorIcon } from "./assets/icons/close-circle-fill.svg";
@@ -80,8 +80,7 @@ function isMessageConfig(input: Message | ReactNode): input is Message {
 const MESSAGE_GLOBAL_CONFIG: { [key: string]: any } = {
   duration: 3,
   style: {
-    top: 8,
-    borderTop: "1px solid red"
+    top: 8
   }
 };
 
@@ -118,7 +117,9 @@ const notificationPropsAdaptorByConfig = (
 function message() {
   let notificationRef: any;
   notificationCreator((notification: any) => (notificationRef = notification), {
-    rootElementId: "rc_message_root"
+    rootElementId: "rc_message_root",
+    className: styles.wrapper,
+    transitionName: "slide"
   });
 
   function genWrappedChildenByType(

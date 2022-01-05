@@ -2,12 +2,9 @@ import {
   useState,
   useRef,
   useImperativeHandle,
-  useEffect,
-  useMemo,
   forwardRef,
   useCallback,
-  CSSProperties,
-  RefObject
+  CSSProperties
 } from "react";
 import { render } from "react-dom";
 import Notice, { NoticeProps, NoticeImperativeHandles } from "./Notice";
@@ -39,7 +36,7 @@ export interface NotificationProps {
 }
 
 export type NotificationRootProps = Partial<
-  Pick<NotificationProps, "transitionName" | "position">
+  Pick<NotificationProps, "transitionName" | "position" | "className">
 > & {
   rootElementId: string;
 };
@@ -70,31 +67,11 @@ export const defaultPosition = "topCenter";
 export const defaultTransitionName = "slide";
 
 const Notification = forwardRef((props: NotificationProps, ref) => {
-  const {
-    maxCount = defaultMaxCount,
-    transitionName = defaultTransitionName,
-    position = defaultPosition,
-    style = {}
-  } = props;
-
   const [notices, setNotices] = useState<NoticeProps[]>([]!);
   // get same config from ref imperative handle
-  const [notificationPropsFromRef, setNotificationPropsFromRef] = useState<
-    NotificationProps
-  >();
+  const notificationPropsFromRef = useRef<NotificationProps>({});
 
   const noticeInstancesRef = useRef<NoticeImperativeHandles[]>([]);
-
-  const integratedProps = useMemo(
-    () => ({
-      transitionName,
-      position,
-      maxCount,
-      style,
-      ...notificationPropsFromRef
-    }),
-    [maxCount, transitionName, position, style, notificationPropsFromRef]
-  );
 
   const getPrevElementsAccuTransfromProps = useCallback(
     (prevUserKeys: string[], initialVal: any) => {
@@ -160,10 +137,19 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
           const noticeKey = notice.noticeKey || getUuid();
           const injectedDefaultZIndex = getCurrentIndex();
           const userKey = notice.key || noticeKey;
-          const { position, transitionName, style } = integratedProps;
+
+          const {
+            position,
+            transitionName,
+            style,
+            maxCount = defaultMaxCount
+          } = {
+            ...props,
+            ...notificationPropsFromRef.current
+          };
 
           const newNotices = [
-            ...prevNotices.slice(0, integratedProps.maxCount - 1),
+            ...prevNotices.slice(-(maxCount - 1)),
             {
               ...notice,
               noticeKey,
@@ -173,8 +159,8 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
                 ...(notice.style || {}),
                 ...style
               },
-              position,
-              transitionName
+              _rootPosition: position,
+              _animationName: transitionName
             }
           ];
 
@@ -190,7 +176,6 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
               ...acc,
               {
                 ...currNotice,
-                isLastElement: index === newNotices.length - 1,
                 prevElementsAccumulatedTranfromProp: {
                   top: prevElementsAccuTransfromProps
                 }
@@ -224,15 +209,14 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
         }
       },
       config: (options: NotificationProps) => {
-        setNotificationPropsFromRef((prev) => ({ ...prev, ...options }));
+        notificationPropsFromRef.current = {
+          ...notificationPropsFromRef.current,
+          ...options
+        };
       }
     }),
-    [integratedProps, getPrevElementsAccuTransfromProps]
+    [props, getPrevElementsAccuTransfromProps]
   );
-
-  useEffect(() => {
-    console.log(notices, "----------- notices ------------");
-  }, [notices]);
 
   const onUnmountNotice = useCallback(
     (noticeKey) => {
@@ -266,7 +250,6 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
             );
             return {
               ...notice,
-              isLastElement: index === arr.length - 1,
               prevElementsAccumulatedTranfromProp: {
                 top: prevElementsAccuTransfromProps
               }
@@ -282,7 +265,7 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
     className: classNameFromProps,
     style: styleFromProps = {},
     prefixCls: prefixClsFromProps
-  } = integratedProps;
+  } = { ...props, ...notificationPropsFromRef.current };
 
   return (
     <>
@@ -300,7 +283,6 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
           divProps,
           onClick,
           onClose,
-          isLastElement,
           _rootPosition,
           _animationName,
           prevElementsAccumulatedTranfromProp
@@ -315,16 +297,15 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
                   (ninstance) => ninstance?.userKey === noticeRef?.userKey
                 );
                 if (!isCurrentInstancesHasBeenCached) {
-                  noticeInstancesRef.current[index] = noticeRef;
-                  // noticeInstancesRef.current = [
-                  //   ...noticeInstancesRef.current,
-
-                  // ];
+                  noticeInstancesRef.current = [
+                    ...noticeInstancesRef.current,
+                    noticeRef
+                  ];
                 }
               }
             }}
             onShouldUnmountNotice={onUnmountNotice}
-            className={className || classNameFromProps}
+            className={`${classNameFromProps} ${className}`}
             style={{ ...styleFromProps, ...style }}
             prefixCls={prefixCls || prefixClsFromProps}
             duration={duration}
@@ -337,7 +318,6 @@ const Notification = forwardRef((props: NotificationProps, ref) => {
             onClick={onClick}
             onClose={onClose}
             key={notice.noticeKey}
-            isLastElement={isLastElement}
             _rootPosition={_rootPosition}
             _animationName={_animationName}
             prevElementsAccumulatedTranfromProp={
@@ -393,7 +373,8 @@ const notificationCreator = () => (
   {
     position = "topCenter",
     transitionName = "slide",
-    rootElementId
+    rootElementId,
+    className
   }: NotificationRootProps
 ) => {
   const notificationRoot = genNotificationRoot(
@@ -405,6 +386,7 @@ const notificationCreator = () => (
     <Notification
       transitionName={transitionName}
       position={position}
+      className={className}
       ref={(ref: any) => {
         if (!ref) {
           return;
