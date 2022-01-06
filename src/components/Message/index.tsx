@@ -120,7 +120,7 @@ function message() {
     rootElementId: "rc_message_root",
     className: styles.wrapper,
     transitionName: "slide",
-    position: "rightTop"
+    position: "rightBottom"
   });
 
   function genWrappedChildenByType(

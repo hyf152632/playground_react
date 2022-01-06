@@ -103,9 +103,11 @@ const Notice = (
         [AnimationOrigin, NotificationAnimationType],
         CSSProperties
       >([
-        [["topCenter", "slide"], { transform: `translateY(0px)` }],
+        [["topCenter", "slide"], {}],
         [["topCenter", "fade"], { opacity: 1 }],
-        [["rightTop", "slide"], {}]
+        [["rightTop", "slide"], {}],
+        [["rightBottom", "slide"], {}],
+        [["bottomRight", "slide"], {}]
       ]);
 
       const animationEndMaps = new Map<
@@ -117,7 +119,15 @@ const Notice = (
           { transform: `translateY(${-(top + height)}px)` }
         ],
         [["topCenter", "fade"], { opacity: 0 }],
-        [["rightTop", "slide"], { transform: `translateX(calc(100% + 20px))` }]
+        [["rightTop", "slide"], { transform: `translateX(calc(100% + 20px))` }],
+        [
+          ["rightBottom", "slide"],
+          { transform: `translateX(calc(100% + 20px))` }
+        ],
+        [
+          ["bottomRight", "slide"],
+          { transform: `translateX(calc(100% + 20px))` }
+        ]
       ]);
 
       const start =
@@ -217,6 +227,7 @@ const Notice = (
     ) {
       styleObj = {
         ...styleObj,
+        bottom: "inherit", // defense wrong bottom;
         top:
           (Number(
             prevElementsAccumulatedTranfromProp &&
@@ -225,6 +236,20 @@ const Notice = (
           ((style && style.top && parseInt(style.top as any, 10)) || 0)
       };
     }
+
+    if (_rootPosition === "bottomRight" || _rootPosition === "rightBottom") {
+      styleObj = {
+        ...styleObj,
+        top: "inherit", // defense wrong top;
+        bottom:
+          (Number(
+            prevElementsAccumulatedTranfromProp &&
+              prevElementsAccumulatedTranfromProp.top
+          ) || 0) +
+          ((style && style.top && parseInt(style.top as any, 10)) || 0)
+      };
+    }
+
     return styleObj;
   }, [_rootPosition, style, prevElementsAccumulatedTranfromProp]);
 
@@ -237,8 +262,12 @@ const Notice = (
       >([
         [["topCenter", "slide"], { transform: `translateY(-100px)` }],
         [["topCenter", "fade"], { opacity: 0 }],
-        [["rightTop", "slide"], { transform: `translateY(0px)` }],
-        [["rightTop", "fade"], { opacity: 0 }]
+        [["rightTop", "slide"], {}],
+        [["rightTop", "fade"], { opacity: 0 }],
+        [["rightBottom", "slide"], {}],
+        [["rightBottom", "fade"], { opacity: 0 }],
+        [["bottomRight", "slide"], {}],
+        [["bottomRight", "fade"], { opacity: 0 }]
       ]);
 
       const animationEndMaps = new Map<
@@ -254,6 +283,22 @@ const Notice = (
         [
           ["rightTop", "fade"],
           { opacity: 1, transform: `translateX(calc(-100% - 20px))` }
+        ],
+        [
+          ["rightBottom", "slide"],
+          { transform: `translateX(calc(-100% - 20px))` }
+        ],
+        [
+          ["rightBottom", "fade"],
+          { opacity: 1, transform: `translateX(calc(-100% - 20px))` }
+        ],
+        [
+          ["bottomRight", "slide"],
+          { transform: `translateX(calc(-100% - 20px))` }
+        ],
+        [
+          ["bottomRight", "fade"],
+          { opacity: 1, transform: `translateX(calc(-100% - 20px))` }
         ]
       ]);
 
@@ -268,6 +313,8 @@ const Notice = (
           return p === _rootPosition && a === _animationName;
         })?.[1] || {};
 
+      console.log(start, end);
+
       noticeRef.current?.animate([start, end], {
         duration: 300,
         easing: "cubic-bezier(0,0,0.32,1)",
@@ -276,6 +323,9 @@ const Notice = (
       isMountRef.current = true;
     }
   }, [_animationName, _rootPosition]);
+
+  console.log(_rootPosition, "------ _rootPosition ------");
+  console.log(computedAnimationStyle, "---------- computedAnimationStyle");
 
   return (
     <div

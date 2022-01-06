@@ -42,7 +42,7 @@ export default function App() {
           message.success({
             style: {
               // zIndex: 10
-              marginTop: 20
+              // marginTop: 20
             },
             content: (
               <div>

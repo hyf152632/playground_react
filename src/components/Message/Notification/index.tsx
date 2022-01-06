@@ -17,7 +17,7 @@ export type AnimationOrigin =
   | "topRight"
   | "rightTop"
   | "rightCenter"
-  | "rigthBottom"
+  | "rightBottom"
   | "bottomLeft"
   | "bottomCenter"
   | "bottomRight"
@@ -355,7 +355,11 @@ const genNotificationRoot = (id: string, position: AnimationOrigin) => {
       div.style.top = "0";
       div.style.right = "0";
     },
-    rigthBottom: () => {
+    rightBottom: () => {
+      div.style.bottom = "0";
+      div.style.right = "0";
+    },
+    bottomRight: () => {
       div.style.bottom = "0";
       div.style.right = "0";
     }
