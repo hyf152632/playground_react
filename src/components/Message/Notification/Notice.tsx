@@ -11,12 +11,14 @@ import {
 } from "react";
 import { ReactComponent as CloseIcon } from "components/Message/assets/icons/close-circle-fill.svg";
 import styles from "./index.module.css";
+import { defaultPosition, defaultTransitionName } from "./index";
 import {
-  defaultPosition,
-  defaultTransitionName,
+  AnimationOrigin,
   NotificationAnimationType,
-  AnimationOrigin
-} from "./index";
+  getElementEnterStartCSSProperties,
+  getElementEnterEndCSSProperties,
+  getElementLeaveEndCSSProperties
+} from "./utils/elementAnimation";
 
 interface DivProps extends React.HTMLProps<HTMLDivElement> {
   // Ideally we would allow all data-* props but this would depend on https://github.com/microsoft/TypeScript/issues/28960
@@ -99,64 +101,13 @@ const Notice = (
         return;
       }
 
-      const { top, height } = noticeRef.current.getBoundingClientRect();
-
-      const animationSlideEndMaps = new Map<AnimationOrigin[], CSSProperties>([
-        [
-          ["topLeft"],
-          {
-            transform: `translate3d(${offsetViewport}px, ${-(
-              top + height
-            )}px, 0)`
-          }
-        ],
-        [["topCenter"], { transform: `translateY(${-(top + height)}px)` }],
-        [
-          ["topRight"],
-          {
-            transform: `translate3d(-${offsetViewport}px, ${-(
-              top + height
-            )}px, 0)`
-          }
-        ],
-        [
-          ["rightTop", "rightBottom", "rightCenter"],
-          { transform: `translateX(calc(100% + ${offsetViewport}px))` }
-        ],
-        [
-          ["bottomLeft"],
-          {
-            transform: `translate3d(${offsetViewport}px, ${
-              window.innerHeight - top
-            }px, 0)`
-          }
-        ],
-        [
-          ["bottomCenter"],
-          { transform: `translateY(${window.innerHeight - top}px)` }
-        ],
-        [
-          ["bottomRight"],
-          {
-            transform: `translate3d(calc(-100% - ${offsetViewport}px), ${
-              window.innerHeight - top
-            }px, 0)`
-          }
-        ],
-        [
-          ["leftTop", "leftCenter", "leftBottom"],
-          { transform: `translateX(calc(-100% - ${offsetViewport}px))` }
-        ]
-      ]);
-
-      const end =
-        _animationName === "fade"
-          ? { opacity: 0 }
-          : [...(animationSlideEndMaps.entries() as any)].find(([k]) => {
-              return (k as AnimationOrigin[]).includes(_rootPosition);
-            })?.[1] || {};
-
       const start = {};
+      const end = getElementLeaveEndCSSProperties(
+        noticeRef.current,
+        _rootPosition,
+        _animationName,
+        offsetViewport
+      );
 
       const player = noticeRef.current?.animate([start, end], {
         duration: 300,
@@ -279,103 +230,17 @@ const Notice = (
   // animation when mount
   useLayoutEffect(() => {
     if (!isMountRef.current && noticeRef.current) {
-      const { top, height } = noticeRef.current.getBoundingClientRect();
-
-      const slideAnimationStartMaps = new Map<AnimationOrigin[], CSSProperties>(
-        [
-          [
-            ["topLeft"],
-            {
-              transform: `translate3d(${offsetViewport}px, -${
-                top + height
-              }px, 0)`
-            }
-          ],
-          [["topCenter"], { transform: `translateY(-${top + height}px)` }],
-          [
-            ["topRight"],
-            {
-              transform: `translate3d(calc(-100% - ${offsetViewport}px), -${
-                top + height
-              }px, 0)`
-            }
-          ],
-          [["rightTop", "rightCenter", "rightBottom"], {}],
-          [
-            ["bottomLeft"],
-            {
-              transform: `translate3d(${offsetViewport}px, ${height}px, 0)`
-            }
-          ],
-          [["bottomCenter"], { transform: `translateY(${height}px)` }],
-          [
-            ["bottomRight"],
-            {
-              transform: `translate3d(calc(-100% - ${offsetViewport}px), ${height}px, 0)`
-            }
-          ],
-          [
-            ["leftTop", "leftCenter", "leftBottom"],
-            { transform: `translateX(calc(-100% - ${offsetViewport}px)` }
-          ]
-        ]
-      );
-
-      const slideAnimationEndMaps = new Map<AnimationOrigin[], CSSProperties>([
-        [
-          ["topLeft"],
-          {
-            transform: `translate3d(${offsetViewport}px, 0, 0)`,
-            opacity: 1
-          }
-        ],
-        [["topCenter"], { transform: `translateY(0px)`, opacity: 1 }],
-        [
-          ["topRight"],
-          {
-            transform: `translate3d(calc(-100% - ${offsetViewport}px), 0, 0)`,
-            opacity: 1
-          }
-        ],
-        [
-          ["rightTop", "rightCenter", "rightBottom"],
-          {
-            transform: `translateX(calc(-100% - ${offsetViewport}px))`,
-            opacity: 1
-          }
-        ],
-        [
-          ["bottomLeft"],
-          {
-            transform: `translate3d(${offsetViewport}px, 0, 0)`,
-            opacity: 1
-          }
-        ],
-        [["bottomCenter"], { transform: `translateY(0px)`, opacity: 1 }],
-        [
-          ["bottomRight"],
-          {
-            transform: `translate3d(calc(-100% - ${offsetViewport}px), 0, 0)`,
-            opacity: 1
-          }
-        ],
-        [
-          ["leftTop", "leftCenter", "leftBottom"],
-          { transform: `translateX(${offsetViewport}px)`, opacity: 1 }
-        ]
-      ]);
-
-      const start =
-        _animationName === "fade"
-          ? { opacity: 0 }
-          : [...(slideAnimationStartMaps.entries() as any)].find(([k]) => {
-              return (k as AnimationOrigin[]).includes(_rootPosition);
-            })?.[1] || {};
-
-      const end =
-        [...(slideAnimationEndMaps.entries() as any)].find(([k]) => {
-          return (k as AnimationOrigin[]).includes(_rootPosition);
-        })?.[1] || {};
+      const start = getElementEnterStartCSSProperties(
+        noticeRef.current,
+        _rootPosition,
+        _animationName,
+        offsetViewport
+      ) as any;
+      const end = getElementEnterEndCSSProperties(
+        _rootPosition,
+        _animationName,
+        offsetViewport
+      ) as any;
 
       noticeRef.current?.animate([start, end], {
         duration: 300,

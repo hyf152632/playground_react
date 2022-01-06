@@ -8,22 +8,11 @@ import {
 } from "react";
 import { render } from "react-dom";
 import Notice, { NoticeProps, NoticeImperativeHandles } from "./Notice";
+import {
+  NotificationAnimationType,
+  AnimationOrigin
+} from "./utils/elementAnimation";
 // import styles from "./index.module.css";
-
-export type NotificationAnimationType = "slide" | "fade";
-export type AnimationOrigin =
-  | "topLeft"
-  | "topCenter"
-  | "topRight"
-  | "rightTop"
-  | "rightCenter"
-  | "rightBottom"
-  | "bottomLeft"
-  | "bottomCenter"
-  | "bottomRight"
-  | "leftTop"
-  | "leftCenter"
-  | "leftBottom";
 
 export interface NotificationProps {
   prefixCls?: string;

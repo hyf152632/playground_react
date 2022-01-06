@@ -119,7 +119,7 @@ function message() {
   notificationCreator((notification: any) => (notificationRef = notification), {
     rootElementId: "rc_message_root",
     className: styles.wrapper,
-    transitionName: "fade",
+    transitionName: "slide",
     position: "topCenter"
   });
 
