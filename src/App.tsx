@@ -8,9 +8,9 @@ import "./styles.css";
 
 let counter = 0;
 
-message.config({
-  maxCount: 2
-});
+// message.config({
+//   maxCount: 2
+// });
 
 export default function App() {
   // const theme = useTheme();
@@ -19,16 +19,14 @@ export default function App() {
 
   useEffect(() => {
     // message.info("haha", 3, console.log);
-    const key = "updatable";
-
-    const openMessage = () => {
-      message.loading({ content: "Loading...", key });
-      setTimeout(() => {
-        message.success({ content: "Loaded!", key, duration: 2 });
-      }, 2000);
-    };
-    openMessage();
-
+    // const key = "updatable";
+    // const openMessage = () => {
+    //   message.loading({ content: "Loading...", key });
+    //   setTimeout(() => {
+    //     message.success({ content: "Loaded!", key, duration: 2 });
+    //   }, 2000);
+    // };
+    // openMessage();
     // messageApis.success("oo");
   }, []);
 

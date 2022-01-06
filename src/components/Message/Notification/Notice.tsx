@@ -100,23 +100,37 @@ const Notice = (
       const { top, height } = noticeRef.current.getBoundingClientRect();
 
       const animationStartMaps = new Map<
-        NotificationAnimationType,
+        [AnimationOrigin, NotificationAnimationType],
         CSSProperties
       >([
-        ["slide", { transform: `translateY(0px)` }],
-        ["fade", { opacity: 1 }]
+        [["topCenter", "slide"], { transform: `translateY(0px)` }],
+        [["topCenter", "fade"], { opacity: 1 }],
+        [["rightTop", "slide"], {}]
       ]);
 
       const animationEndMaps = new Map<
-        NotificationAnimationType,
+        [AnimationOrigin, NotificationAnimationType],
         CSSProperties
       >([
-        ["slide", { transform: `translateY(${-(top + height)}px)` }],
-        ["fade", { opacity: 0 }]
+        [
+          ["topCenter", "slide"],
+          { transform: `translateY(${-(top + height)}px)` }
+        ],
+        [["topCenter", "fade"], { opacity: 0 }],
+        [["rightTop", "slide"], { transform: `translateX(calc(100% + 20px))` }]
       ]);
 
-      const start = animationStartMaps.get(_animationName) as any;
-      const end = animationEndMaps.get(_animationName) as any;
+      const start =
+        [...(animationStartMaps.entries() as any)].find(([k]) => {
+          const [p, a] = k;
+          return p === _rootPosition && a === _animationName;
+        })?.[1] || {};
+
+      const end =
+        [...(animationEndMaps.entries() as any)].find(([k]) => {
+          const [p, a] = k;
+          return p === _rootPosition && a === _animationName;
+        })?.[1] || {};
 
       var player = noticeRef.current?.animate([start, end], {
         duration: 300,
@@ -129,7 +143,7 @@ const Notice = (
         () => afterAnimationFinishedCb && afterAnimationFinishedCb()
       );
     },
-    [_animationName]
+    [_animationName, _rootPosition]
   );
 
   const handleOnShouldUnmountNotice = useCallback(() => {
@@ -198,7 +212,8 @@ const Notice = (
     if (
       _rootPosition === "topLeft" ||
       _rootPosition === "topCenter" ||
-      _rootPosition === "topRight"
+      _rootPosition === "topRight" ||
+      _rootPosition === "rightTop"
     ) {
       styleObj = {
         ...styleObj,
@@ -217,23 +232,41 @@ const Notice = (
   useLayoutEffect(() => {
     if (!isMountRef.current) {
       const animationStartMaps = new Map<
-        NotificationAnimationType,
+        [AnimationOrigin, NotificationAnimationType],
         CSSProperties
       >([
-        ["slide", { transform: `translateY(-100px)` }],
-        ["fade", { opacity: 0 }]
+        [["topCenter", "slide"], { transform: `translateY(-100px)` }],
+        [["topCenter", "fade"], { opacity: 0 }],
+        [["rightTop", "slide"], { transform: `translateY(0px)` }],
+        [["rightTop", "fade"], { opacity: 0 }]
       ]);
 
       const animationEndMaps = new Map<
-        NotificationAnimationType,
+        [AnimationOrigin, NotificationAnimationType],
         CSSProperties
       >([
-        ["slide", { transform: `translateY(0px)` }],
-        ["fade", { opacity: 1 }]
+        [["topCenter", "slide"], { transform: `translateY(0px)` }],
+        [["topCenter", "fade"], { opacity: 1 }],
+        [
+          ["rightTop", "slide"],
+          { transform: `translateX(calc(-100% - 20px))` }
+        ],
+        [
+          ["rightTop", "fade"],
+          { opacity: 1, transform: `translateX(calc(-100% - 20px))` }
+        ]
       ]);
 
-      const start = animationStartMaps.get(_animationName) as any;
-      const end = animationEndMaps.get(_animationName) as any;
+      const start =
+        [...(animationStartMaps.entries() as any)].find(([k]) => {
+          const [p, a] = k;
+          return p === _rootPosition && a === _animationName;
+        })?.[1] || {};
+      const end =
+        [...(animationEndMaps.entries() as any)].find(([k]) => {
+          const [p, a] = k;
+          return p === _rootPosition && a === _animationName;
+        })?.[1] || {};
 
       noticeRef.current?.animate([start, end], {
         duration: 300,
@@ -242,7 +275,7 @@ const Notice = (
       });
       isMountRef.current = true;
     }
-  }, [_animationName]);
+  }, [_animationName, _rootPosition]);
 
   return (
     <div
