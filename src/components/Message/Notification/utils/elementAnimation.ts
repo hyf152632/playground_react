@@ -74,10 +74,6 @@ export function getElementEnterEndCSSProperties(
   animationType: NotificationAnimationType,
   offsetViewport: number
 ): CSSProperties {
-  if (animationType === "fade") {
-    return { opacity: 1 };
-  }
-
   const slideAnimationEndMaps = new Map<AnimationOrigin[], CSSProperties>([
     [
       ["topLeft"],
@@ -117,11 +113,16 @@ export function getElementEnterEndCSSProperties(
     ]
   ]);
 
-  return (
+  const slideEnd =
     [...(slideAnimationEndMaps.entries() as any)].find(([k]) => {
       return (k as AnimationOrigin[]).includes(position);
-    })?.[1] || {}
-  );
+    })?.[1] || {};
+
+  if (animationType === "slide") {
+    return slideEnd;
+  }
+
+  return { ...slideEnd, opacity: 1 };
 }
 
 export function getElementLeaveEndCSSProperties(

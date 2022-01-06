@@ -119,8 +119,8 @@ function message() {
   notificationCreator((notification: any) => (notificationRef = notification), {
     rootElementId: "rc_message_root",
     className: styles.wrapper,
-    transitionName: "slide",
-    position: "topCenter"
+    transitionName: "fade",
+    position: "leftCenter"
   });
 
   function genWrappedChildenByType(
