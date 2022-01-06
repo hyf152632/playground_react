@@ -346,27 +346,71 @@ const genNotificationRoot = (id: string, position: AnimationOrigin) => {
   div.style.display = "relative";
   document.body.appendChild(div);
 
-  const positionConds = {
-    topCenter: () => {
-      div.style.top = "0";
-      div.style.left = "50%";
-    },
-    rightTop: () => {
-      div.style.top = "0";
-      div.style.right = "0";
-    },
-    rightBottom: () => {
-      div.style.bottom = "0";
-      div.style.right = "0";
-    },
-    bottomRight: () => {
-      div.style.bottom = "0";
-      div.style.right = "0";
-    }
-  } as any;
+  const positionCondsMap = new Map<AnimationOrigin[], () => void>([
+    [
+      ["topLeft", "leftTop"],
+      () => {
+        div.style.top = "0";
+        div.style.left = "0";
+      }
+    ],
+    [
+      ["topCenter"],
+      () => {
+        div.style.top = "0";
+        div.style.left = "50%";
+      }
+    ],
+    [
+      ["topRight", "rightTop"],
+      () => {
+        div.style.top = "0";
+        div.style.right = "0";
+      }
+    ],
+    [
+      ["rightCenter"],
+      () => {
+        div.style.right = "0";
+        div.style.top = "50%";
+      }
+    ],
+    [
+      ["rightBottom", "bottomRight"],
+      () => {
+        div.style.right = "0";
+        div.style.bottom = "0";
+      }
+    ],
+    [
+      ["bottomCenter"],
+      () => {
+        div.style.bottom = "0";
+        div.style.left = "50%";
+      }
+    ],
+    [
+      ["bottomLeft", "leftBottom"],
+      () => {
+        div.style.bottom = "0";
+        div.style.left = "0";
+      }
+    ],
+    [
+      ["leftCenter"],
+      () => {
+        div.style.left = "0";
+        div.style.top = "50%";
+      }
+    ]
+  ]);
 
-  if (positionConds[position]) {
-    positionConds[position]();
+  const positionFn = [...(positionCondsMap.entries() as any)].find(([k]) => {
+    return (k as AnimationOrigin[]).includes(position);
+  })?.[1];
+
+  if (positionFn) {
+    positionFn();
   }
 
   return div;

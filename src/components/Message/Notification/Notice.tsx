@@ -68,6 +68,8 @@ export interface NoticeImperativeHandles {
   getEleOriginStyle: () => CSSProperties;
 }
 
+const offsetViewport = 8;
+
 const Notice = (
   {
     userKey,
@@ -99,50 +101,64 @@ const Notice = (
 
       const { top, height } = noticeRef.current.getBoundingClientRect();
 
-      const animationStartMaps = new Map<
-        [AnimationOrigin, NotificationAnimationType],
-        CSSProperties
-      >([
-        [["topCenter", "slide"], {}],
-        [["topCenter", "fade"], { opacity: 1 }],
-        [["rightTop", "slide"], {}],
-        [["rightBottom", "slide"], {}],
-        [["bottomRight", "slide"], {}]
-      ]);
-
-      const animationEndMaps = new Map<
-        [AnimationOrigin, NotificationAnimationType],
-        CSSProperties
-      >([
+      const animationSlideEndMaps = new Map<AnimationOrigin[], CSSProperties>([
         [
-          ["topCenter", "slide"],
-          { transform: `translateY(${-(top + height)}px)` }
+          ["topLeft"],
+          {
+            transform: `translate3d(${offsetViewport}px, ${-(
+              top + height
+            )}px, 0)`
+          }
         ],
-        [["topCenter", "fade"], { opacity: 0 }],
-        [["rightTop", "slide"], { transform: `translateX(calc(100% + 20px))` }],
+        [["topCenter"], { transform: `translateY(${-(top + height)}px)` }],
         [
-          ["rightBottom", "slide"],
-          { transform: `translateX(calc(100% + 20px))` }
+          ["topRight"],
+          {
+            transform: `translate3d(-${offsetViewport}px, ${-(
+              top + height
+            )}px, 0)`
+          }
         ],
         [
-          ["bottomRight", "slide"],
-          { transform: `translateX(calc(100% + 20px))` }
+          ["rightTop", "rightBottom", "rightCenter"],
+          { transform: `translateX(calc(100% + ${offsetViewport}px))` }
+        ],
+        [
+          ["bottomLeft"],
+          {
+            transform: `translate3d(${offsetViewport}px, ${
+              window.innerHeight - top
+            }px, 0)`
+          }
+        ],
+        [
+          ["bottomCenter"],
+          { transform: `translateY(${window.innerHeight - top}px)` }
+        ],
+        [
+          ["bottomRight"],
+          {
+            transform: `translate3d(calc(-100% - ${offsetViewport}px), ${
+              window.innerHeight - top
+            }px, 0)`
+          }
+        ],
+        [
+          ["leftTop", "leftCenter", "leftBottom"],
+          { transform: `translateX(calc(-100% - ${offsetViewport}px))` }
         ]
       ]);
 
-      const start =
-        [...(animationStartMaps.entries() as any)].find(([k]) => {
-          const [p, a] = k;
-          return p === _rootPosition && a === _animationName;
-        })?.[1] || {};
-
       const end =
-        [...(animationEndMaps.entries() as any)].find(([k]) => {
-          const [p, a] = k;
-          return p === _rootPosition && a === _animationName;
-        })?.[1] || {};
+        _animationName === "fade"
+          ? { opacity: 0 }
+          : [...(animationSlideEndMaps.entries() as any)].find(([k]) => {
+              return (k as AnimationOrigin[]).includes(_rootPosition);
+            })?.[1] || {};
 
-      var player = noticeRef.current?.animate([start, end], {
+      const start = {};
+
+      const player = noticeRef.current?.animate([start, end], {
         duration: 300,
         easing: "cubic-bezier(0,0,0.32,1)",
         fill: "forwards"
@@ -220,6 +236,7 @@ const Notice = (
     // if(_animationName === '') {}
     let styleObj = {};
     if (
+      _rootPosition === "leftTop" ||
       _rootPosition === "topLeft" ||
       _rootPosition === "topCenter" ||
       _rootPosition === "topRight" ||
@@ -237,7 +254,13 @@ const Notice = (
       };
     }
 
-    if (_rootPosition === "bottomRight" || _rootPosition === "rightBottom") {
+    if (
+      _rootPosition === "leftBottom" ||
+      _rootPosition === "bottomLeft" ||
+      _rootPosition === "bottomCenter" ||
+      _rootPosition === "bottomRight" ||
+      _rootPosition === "rightBottom"
+    ) {
       styleObj = {
         ...styleObj,
         top: "inherit", // defense wrong top;
@@ -255,65 +278,104 @@ const Notice = (
 
   // animation when mount
   useLayoutEffect(() => {
-    if (!isMountRef.current) {
-      const animationStartMaps = new Map<
-        [AnimationOrigin, NotificationAnimationType],
-        CSSProperties
-      >([
-        [["topCenter", "slide"], { transform: `translateY(-100px)` }],
-        [["topCenter", "fade"], { opacity: 0 }],
-        [["rightTop", "slide"], {}],
-        [["rightTop", "fade"], { opacity: 0 }],
-        [["rightBottom", "slide"], {}],
-        [["rightBottom", "fade"], { opacity: 0 }],
-        [["bottomRight", "slide"], {}],
-        [["bottomRight", "fade"], { opacity: 0 }]
-      ]);
+    if (!isMountRef.current && noticeRef.current) {
+      const { top, height } = noticeRef.current.getBoundingClientRect();
 
-      const animationEndMaps = new Map<
-        [AnimationOrigin, NotificationAnimationType],
-        CSSProperties
-      >([
-        [["topCenter", "slide"], { transform: `translateY(0px)` }],
-        [["topCenter", "fade"], { opacity: 1 }],
+      const slideAnimationStartMaps = new Map<AnimationOrigin[], CSSProperties>(
         [
-          ["rightTop", "slide"],
-          { transform: `translateX(calc(-100% - 20px))` }
+          [
+            ["topLeft"],
+            {
+              transform: `translate3d(${offsetViewport}px, -${
+                top + height
+              }px, 0)`
+            }
+          ],
+          [["topCenter"], { transform: `translateY(-${top + height}px)` }],
+          [
+            ["topRight"],
+            {
+              transform: `translate3d(calc(-100% - ${offsetViewport}px), -${
+                top + height
+              }px, 0)`
+            }
+          ],
+          [["rightTop", "rightCenter", "rightBottom"], {}],
+          [
+            ["bottomLeft"],
+            {
+              transform: `translate3d(${offsetViewport}px, ${height}px, 0)`
+            }
+          ],
+          [["bottomCenter"], { transform: `translateY(${height}px)` }],
+          [
+            ["bottomRight"],
+            {
+              transform: `translate3d(calc(-100% - ${offsetViewport}px), ${height}px, 0)`
+            }
+          ],
+          [
+            ["leftTop", "leftCenter", "leftBottom"],
+            { transform: `translateX(calc(-100% - ${offsetViewport}px)` }
+          ]
+        ]
+      );
+
+      const slideAnimationEndMaps = new Map<AnimationOrigin[], CSSProperties>([
+        [
+          ["topLeft"],
+          {
+            transform: `translate3d(${offsetViewport}px, 0, 0)`,
+            opacity: 1
+          }
+        ],
+        [["topCenter"], { transform: `translateY(0px)`, opacity: 1 }],
+        [
+          ["topRight"],
+          {
+            transform: `translate3d(calc(-100% - ${offsetViewport}px), 0, 0)`,
+            opacity: 1
+          }
         ],
         [
-          ["rightTop", "fade"],
-          { opacity: 1, transform: `translateX(calc(-100% - 20px))` }
+          ["rightTop", "rightCenter", "rightBottom"],
+          {
+            transform: `translateX(calc(-100% - ${offsetViewport}px))`,
+            opacity: 1
+          }
         ],
         [
-          ["rightBottom", "slide"],
-          { transform: `translateX(calc(-100% - 20px))` }
+          ["bottomLeft"],
+          {
+            transform: `translate3d(${offsetViewport}px, 0, 0)`,
+            opacity: 1
+          }
+        ],
+        [["bottomCenter"], { transform: `translateY(0px)`, opacity: 1 }],
+        [
+          ["bottomRight"],
+          {
+            transform: `translate3d(calc(-100% - ${offsetViewport}px), 0, 0)`,
+            opacity: 1
+          }
         ],
         [
-          ["rightBottom", "fade"],
-          { opacity: 1, transform: `translateX(calc(-100% - 20px))` }
-        ],
-        [
-          ["bottomRight", "slide"],
-          { transform: `translateX(calc(-100% - 20px))` }
-        ],
-        [
-          ["bottomRight", "fade"],
-          { opacity: 1, transform: `translateX(calc(-100% - 20px))` }
+          ["leftTop", "leftCenter", "leftBottom"],
+          { transform: `translateX(${offsetViewport}px)`, opacity: 1 }
         ]
       ]);
 
       const start =
-        [...(animationStartMaps.entries() as any)].find(([k]) => {
-          const [p, a] = k;
-          return p === _rootPosition && a === _animationName;
-        })?.[1] || {};
-      const end =
-        [...(animationEndMaps.entries() as any)].find(([k]) => {
-          const [p, a] = k;
-          return p === _rootPosition && a === _animationName;
-        })?.[1] || {};
+        _animationName === "fade"
+          ? { opacity: 0 }
+          : [...(slideAnimationStartMaps.entries() as any)].find(([k]) => {
+              return (k as AnimationOrigin[]).includes(_rootPosition);
+            })?.[1] || {};
 
-      console.log(start, end);
+      const end =
+        [...(slideAnimationEndMaps.entries() as any)].find(([k]) => {
+          return (k as AnimationOrigin[]).includes(_rootPosition);
+        })?.[1] || {};
 
       noticeRef.current?.animate([start, end], {
         duration: 300,
