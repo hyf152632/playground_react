@@ -1,0 +1,41 @@
+.signal-lamp-wrapper {
+  display: inline-block;
+  border-radius: 50%;
+  position: relative;
+}
+
+.singal-lamp-init {
+  background-color: #999;
+}
+
+.singal-lamp-error {
+  background-color: #ff4d4f;
+}
+
+.singal-lamp-working {
+  background: hsla(168, 90%, 45%, 1);
+}
+
+.singal-lamp-working::after {
+  content: "";
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 0;
+  transform: translate(-50%, -50%);
+  animation: signal-lamp-working-keyframes 1.5s ease-in-out infinite;
+}
+
+@keyframes signal-lamp-working-keyframes {
+  0% {
+    width: 0;
+    height: 0;
+    background-color: hsla(168, 90%, 45%, 1);
+  }
+
+  100% {
+    width: 30px;
+    height: 30px;
+  }
+}

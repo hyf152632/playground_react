@@ -3,6 +3,7 @@ import { useEffect } from "react";
 // import I18n from "components/I18n";
 // import Input from "components/Input";
 import message from "components/Message";
+import SignalLamp from "components/SignalLamp";
 import "./styles.css";
 // import { useTheme } from "./theme";
 
@@ -88,6 +89,9 @@ export default function App() {
       >
         async loading
       </button>
+      <div>
+        <SignalLamp status={1} />
+      </div>
     </div>
   );
 }
